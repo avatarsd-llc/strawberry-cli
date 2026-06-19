@@ -1,11 +1,13 @@
-# CI for @avatarsd-llc/strawberry-cli.
+# CI for the strawberry monorepo (npm workspaces).
 #
-# Gates every push and PR: regenerate the protobuf codec (gitignored, ADR-0066 D2),
-# typecheck, run the WS protocol vitest matrix, bundle, and enforce the purity gate.
-# The SIL acceptance run is informational only (continue-on-error): it exercises the
-# real CLI binary against the mock board and still surfaces the documented OPEN
-# protocol findings (push-only `query snapshot`, inactive-unit io-add) as failing
-# rows, so it must not block the merge.
+# Gates every push and PR across BOTH packages: regenerate the protobuf codec
+# (gitignored, ADR-0066 D2) in @avatarsd-llc/strawberry-client, typecheck, run the
+# vitest suites, build in dependency order (library then CLI), and enforce the
+# purity gate (now owned by strawberry-client).
+# The SIL acceptance run is informational only (continue-on-error): it exercises
+# the real CLI binary against the mock board and still surfaces the documented
+# OPEN protocol findings (push-only `query snapshot`, inactive-unit io-add) as
+# failing rows, so it must not block the merge.
 name: ci
 
 on:
@@ -27,33 +29,39 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install dependencies
+      - name: Install dependencies (workspace)
         run: npm ci
 
       # ws is an optional peer dependency (Node transport + SIL mock board);
-      # npm ci skips it, so install it explicitly for the SIL step below.
+      # npm ci skips it, so install it explicitly into the CLI workspace for SIL.
       - name: Install ws (optional peer)
-        run: npm i --no-save ws
+        run: npm i --no-save -w @avatarsd-llc/strawberry-cli ws
 
-      # src/proto/messages.ts is gitignored and consumed by tsc/tsup/vitest,
-      # so it must exist before any of them run.
-      - name: Generate protobuf codec
-        run: npm run proto
+      # strawberry-client/src/proto/messages.ts is gitignored and consumed by
+      # tsc/tsup/vitest, so it must exist before any of them run.
+      - name: Generate protobuf codec (strawberry-client)
+        run: npm run proto -w @avatarsd-llc/strawberry-client
 
-      - name: Typecheck
-        run: npx tsc --noEmit
+      # Build the library FIRST: the CLI typecheck resolves
+      # '@avatarsd-llc/strawberry-client' through its package exports, which point at
+      # dist/*.d.ts — so the library's dist must exist before tsc runs on the CLI.
+      - name: Build strawberry-client
+        run: npm run build -w @avatarsd-llc/strawberry-client
 
-      - name: Test (WS protocol matrix)
-        run: npm test
+      - name: Typecheck (both packages)
+        run: npm run typecheck --workspaces --if-present
 
-      - name: Build
-        run: npm run build
+      - name: Test (both packages)
+        run: npm run test --workspaces --if-present
 
-      - name: Purity gate
-        run: npm run lint:purity
+      - name: Build strawberry-cli
+        run: npm run build -w @avatarsd-llc/strawberry-cli
+
+      - name: Purity gate (strawberry-client)
+        run: npm run lint:purity -w @avatarsd-llc/strawberry-client
 
       # Informational: drives the built CLI against the mock board. Expected to
       # report the OPEN protocol findings as failing rows; never blocks CI.
       - name: SIL acceptance (informational)
-        run: npm run sil
+        run: node packages/strawberry-cli/sil/run-sil.mjs
         continue-on-error: true

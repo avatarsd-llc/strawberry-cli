@@ -1,0 +1,84 @@
+{
+  "name": "@avatarsd-llc/strawberry-client",
+  "version": "0.1.0",
+  "description": "Open-source, framework-free TypeScript client for the Strawberry (Gorshok-v4) grow controller WS+protobuf interface. One library for the web UI SPA, the Pulumi deploy provider, the strawberry-cli, and a Claude Code agent-skill.",
+  "license": "Apache-2.0",
+  "author": "Avatars LLC",
+  "homepage": "https://github.com/avatarsd-llc/strawberry-cli#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/avatarsd-llc/strawberry-cli.git",
+    "directory": "packages/strawberry-client"
+  },
+  "bugs": {
+    "url": "https://github.com/avatarsd-llc/strawberry-cli/issues"
+  },
+  "keywords": [
+    "gorshok",
+    "strawberry",
+    "websocket",
+    "protobuf",
+    "grow-controller",
+    "strawberry-client",
+    "esp32"
+  ],
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./design": {
+      "types": "./dist/design/index.d.ts",
+      "import": "./dist/design/index.mjs",
+      "require": "./dist/design/index.cjs"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.mjs",
+      "require": "./dist/node.cjs"
+    },
+    "./proto": {
+      "types": "./dist/proto/index.d.ts",
+      "import": "./dist/proto/index.mjs",
+      "require": "./dist/proto/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "proto",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint:purity": "node scripts/check-purity.mjs",
+    "proto": "node scripts/gen-proto.mjs"
+  },
+  "dependencies": {
+    "@protobuf-ts/runtime": "^2.9.4"
+  },
+  "peerDependencies": {
+    "ws": "^8"
+  },
+  "peerDependenciesMeta": {
+    "ws": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

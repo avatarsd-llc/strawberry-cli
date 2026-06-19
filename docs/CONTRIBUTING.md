@@ -1,43 +1,58 @@
 # Contributing
 
-`@avatarsd-llc/strawberry-cli` is the framework-free WS+protobuf client for the Strawberry
-(Gorshok-v4) grow controller, consumed four ways from one artifact: a library, the `strawberry`
-CLI, a Claude Code agent skill, and the docs. See [`library.md`](./library.md),
-[`cli.md`](./cli.md), and [`protocol.md`](./protocol.md) before changing wire-facing code.
+This repo is an **npm-workspaces monorepo** with two packages: the framework-free WS+protobuf
+client library [`@avatarsd-llc/strawberry-client`](../packages/strawberry-client) and the `strawberry`
+CLI [`@avatarsd-llc/strawberry-cli`](../packages/strawberry-cli) (plus its Claude Code agent
+skills) that consumes it. See
+[`../packages/strawberry-client/docs/library.md`](../packages/strawberry-client/docs/library.md),
+[`../packages/strawberry-cli/docs/cli.md`](../packages/strawberry-cli/docs/cli.md), and
+[`../packages/strawberry-client/docs/protocol.md`](../packages/strawberry-client/docs/protocol.md)
+before changing wire-facing code.
 
 ## Prerequisites
 
 - Node **22+** (the built-in global `WebSocket` is used; on older Node the optional `ws` peer
   dependency is needed for the Node transport).
-- `npm install`.
+- `npm install` at the repo root (links the workspace and installs shared devDeps).
 
 ## Layout
 
+The monorepo root holds the private workspace `package.json` (fan-out scripts) and shared
+devDeps; each package owns its own `package.json`, `tsup.config.ts`, `tsconfig.json`, and
+`vitest.config.ts`.
+
 | Path | What |
 |------|------|
-| `src/core/` | `DeviceClient`, `PushBus`, codec/token seams |
-| `src/wire/` | transport seam + WS implementations + frame framing |
-| `src/auth/` | pure-JS SEC-001 HMAC |
-| `src/api/commands.ts` | typed 1:1-with-proto command builders |
-| `src/cli/` | the `strawberry` CLI (`index.ts` dispatch + `commands/*.ts`) |
-| `src/proto/` | **generated** protobuf-ts codec (gitignored; see below) |
-| `proto/messages.proto` | **vendored** schema (the source of truth for the codec) |
-| `test/` | vitest unit + protocol-matrix tests |
-| `sil/` | software-in-the-loop: a protocol-faithful mock board + runner |
-| `scripts/` | `gen-proto.mjs`, `check-purity.mjs`, `hil-matrix.mjs` |
-| `skill/` | Claude Code agent skills that drive the CLI |
-| `docs/` | this reference set |
+| `packages/strawberry-client/` | **the library** `@avatarsd-llc/strawberry-client` (v0.1.0) |
+| `packages/strawberry-client/src/core/` | `DeviceClient`, `PushBus`, codec/token seams |
+| `packages/strawberry-client/src/wire/` | transport seam + WS implementations + frame framing |
+| `packages/strawberry-client/src/auth/` | pure-JS SEC-001 HMAC |
+| `packages/strawberry-client/src/api/commands.ts` | typed 1:1-with-proto command builders |
+| `packages/strawberry-client/src/proto/` | **generated** protobuf-ts codec (gitignored; see below) |
+| `packages/strawberry-client/proto/messages.proto` | **vendored** schema (source of truth for the codec) |
+| `packages/strawberry-client/scripts/` | `gen-proto.mjs`, `check-purity.mjs` |
+| `packages/strawberry-client/test/` | vitest unit + protocol-matrix tests |
+| `packages/strawberry-cli/` | **the CLI** `@avatarsd-llc/strawberry-cli` (v0.2.0) |
+| `packages/strawberry-cli/src/cli/` | the `strawberry` CLI (`index.ts` dispatch + `commands/*.ts`); imports the library by package specifier |
+| `packages/strawberry-cli/bin/` | `strawberry-cli.mjs` bin shim (imports `dist/cli.mjs`) |
+| `packages/strawberry-cli/test/` | CLI args + wg-conf vitest tests |
+| `packages/strawberry-cli/sil/` | software-in-the-loop: a protocol-faithful mock board + runner |
+| `packages/strawberry-cli/scripts/` | `hil-matrix.mjs` |
+| `packages/strawberry-cli/skill/` | Claude Code agent skills that drive the CLI |
+| `docs/` | this contributing guide (`CONTRIBUTING.md`); library/protocol/cli docs live under each package's `docs/` |
 
 ## The protobuf codec is generated — never edit it
 
-`src/proto/messages.ts` is **generated** from `proto/messages.proto` and is gitignored. Do not
-edit it by hand; regenerate it:
+`packages/strawberry-client/src/proto/messages.ts` is **generated** from
+`packages/strawberry-client/proto/messages.proto` and is gitignored. Do not edit it by hand;
+regenerate it from the repo root:
 
 ```bash
-npm run proto
+npm run proto                                   # fan-out to the strawberry-client workspace
+# or: npm run proto -w @avatarsd-llc/strawberry-client
 ```
 
-`scripts/gen-proto.mjs` runs `protoc` with the protobuf-ts plugin and the options
+`packages/strawberry-client/scripts/gen-proto.mjs` runs `protoc` with the protobuf-ts plugin and the options
 `long_type_string,client_none,server_none` — **byte-identical to the firmware web-ui's
 generator**, so the SPA and this library share the same codec.
 
@@ -45,27 +60,34 @@ generator**, so the SPA and this library share the same codec.
 
 `proto/messages.proto` is vendored from the firmware repo (`components/proto/messages.proto`),
 which is the schema's single source of truth. This package is embedded in `strawberry-fw` as a
-git submodule at `packages/device-client`, so:
+git submodule at `packages/strawberry-client`, so:
 
 - In the firmware tree, point the generator at the in-tree proto:
   `PROTO_DIR=../../components/proto npm run proto` (the `PROTO_DIR` env var overrides the default
   `./proto`).
 - In the standalone repo, the generator defaults to the vendored `./proto`.
-- When the schema changes in `strawberry-fw`, re-vendor `proto/messages.proto`, run
-  `npm run proto`, and rebuild. The protocol counts in [`protocol.md`](./protocol.md) are codec
-  truth — if a count moves, update that doc too.
+- When the schema changes in `strawberry-fw`, re-vendor
+  `packages/strawberry-client/proto/messages.proto`, run `npm run proto`, and rebuild. The protocol
+  counts in [`../packages/strawberry-client/docs/protocol.md`](../packages/strawberry-client/docs/protocol.md)
+  are codec truth — if a count moves, update that doc too.
 
 ## Build, test, gate
 
+From the repo root (workspace-aware; the library builds before the CLI):
+
 ```bash
-npm run build         # tsup -> dist/ (ESM .mjs + CJS .cjs + .d.ts), three subpaths
-npm test              # vitest run (unit + protocol matrix)
-npm run lint:purity   # asserts no @angular/* or rxjs leak into the library
+npm run build         # build strawberry-client (4 subpaths) then strawberry-cli (dist/cli.{mjs,cjs})
+npm run typecheck     # tsc --noEmit in both packages
+npm test              # vitest run in both packages (unit + protocol matrix)
+npm run lint:purity   # asserts no @angular/* or rxjs leak into the library (strawberry-client)
 ```
 
-`npm run build` runs `tsup`; the codec must be generated first (`npm run proto`) or the build
-fails on the missing `src/proto/messages.ts`. The purity gate keeps the library framework-free —
-it is the invariant that lets the same code run in the SPA and in Node.
+Per-package: append `-w @avatarsd-llc/strawberry-client` or `-w @avatarsd-llc/strawberry-cli`.
+The strawberry-client build runs `tsup`; the codec must be generated first (`npm run proto`) or the
+build fails on the missing `packages/strawberry-client/src/proto/messages.ts`. The CLI build resolves
+`@avatarsd-llc/strawberry-client` from the workspace-linked package, so build the library first (the
+root `build` script and CI already order it that way). The purity gate keeps the library
+framework-free — the invariant that lets the same code run in the SPA and in Node.
 
 ## Test tiers — unit, SIL, HIL
 
@@ -73,9 +95,11 @@ Three layers validate the client; they are designed to agree row-for-row.
 
 ### 1. Unit (vitest) — `npm test`
 
-Mock-based tests in `test/`: the HMAC vector (against the pinned cross-impl value), wire
-framing round-trips, codec round-trips, CLI arg parsing, `wg-conf` parsing, and a protocol
-matrix (`test/ws-protocol-matrix.test.ts`) asserting the codec surface counts (64 commands / 38
+Mock-based tests split across the two packages: in `packages/strawberry-client/test/` the HMAC vector
+(against the pinned cross-impl value), wire framing round-trips, codec round-trips, and the
+protocol matrix; in `packages/strawberry-cli/test/` the CLI arg parsing and `wg-conf` parsing. The
+protocol matrix (`packages/strawberry-client/test/ws-protocol-matrix.test.ts`) asserts the codec
+surface counts (64 commands / 38
 server / 17 queries / 13 topics). These run with no network and no hardware.
 
 > Lesson from HIL: 100% line coverage of mock tests still misses **firmware-reality mismatches**
@@ -85,28 +109,29 @@ server / 17 queries / 13 topics). These run with no network and no hardware.
 ### 2. SIL (software-in-the-loop) — `npm run sil`
 
 ```bash
-npm run sil            # builds, boots the mock board on an ephemeral loopback port, drives the CLI
+npm run sil            # from repo root: builds the library + CLI, boots the mock board, drives the CLI
+# or, in packages/strawberry-cli:
 npm run sil:mock       # just boot the mock board (sil/mock-board.mjs)
-npm run sil:docker     # run the mock in a container, drive the CLI against it
 ```
 
-`sil/mock-board.mjs` is a protocol-faithful stand-in for the firmware WS backend: it speaks the
-same 1-byte framing, the canonical protobuf codec (imported from the built `dist/` so it agrees
-byte-for-byte), and **deliberately reproduces the documented firmware quirks** so SIL
+`packages/strawberry-cli/sil/mock-board.mjs` is a protocol-faithful stand-in for the firmware WS
+backend: it speaks the same 1-byte framing, the canonical protobuf codec (imported from the built
+`@avatarsd-llc/strawberry-client` sibling package so it agrees byte-for-byte), and **deliberately
+reproduces the documented firmware quirks** so SIL
 expectations match HIL row-for-row:
 
 - `query stats` -> "unknown query" (push-only on the firmware).
 - `auth resume` on a new connection -> rejected (tokens are socket-bound).
 - `grow io-add` to an inactive unit -> `ERR_NOT_FOUND`; to an active unit -> ok.
 
-`sil/run-sil.mjs` drives the real CLI binary against the mock under a sandboxed `HOME` (so the
+`packages/strawberry-cli/sil/run-sil.mjs` drives the real CLI binary against the mock under a sandboxed `HOME` (so the
 per-host `FileTokenStore` can't leak between runs) and asserts one row per command. Exit `0` iff
 every row meets its expectation. This is the host-runnable twin of the HIL matrix and runs in CI.
 
-### 3. HIL (hardware-in-the-loop) — `scripts/hil-matrix.mjs`
+### 3. HIL (hardware-in-the-loop) — `packages/strawberry-cli/scripts/hil-matrix.mjs`
 
 ```bash
-node scripts/hil-matrix.mjs --host 10.5.60.177 --password-file ./board.pass
+node packages/strawberry-cli/scripts/hil-matrix.mjs --host 10.5.60.177 --password-file ./board.pass
 ```
 
 Exercises every CLI command against a **live board**. Tiers per row:
@@ -126,9 +151,12 @@ documents the socket-bound-token, push-only-stats, and unit-materialization real
 
 - **No emojis** in code, commits, or docs.
 - Keep the library **framework-free** — no `@angular/*`, no `rxjs`, no DOM-only or Node-only
-  globals in `src/core`, `src/wire/transport.ts`, `src/auth`, or `src/api`. Node-only code lives
-  behind the `./node` subpath; browser-only behind structural `*Like` interfaces. The purity gate
-  enforces this.
+  globals in `packages/strawberry-client/src/core`, `.../src/wire/transport.ts`, `.../src/auth`, or
+  `.../src/api`. Node-only code lives behind the `./node` subpath; browser-only behind structural
+  `*Like` interfaces. The purity gate enforces this.
+- The CLI must import the library by **package specifier** (`@avatarsd-llc/strawberry-client`,
+  `/node`, `/proto`, `/design`) — never via a relative path that escapes
+  `packages/strawberry-cli/src`.
 - **Enumerate the wire surface from the codec**, never a hand-written literal list — the counts
   (64/38/17/13) are codec truth.
 - Respect the seams: `DeviceClient` must not name a `WebSocket` or the protobuf runtime directly;
@@ -143,4 +171,6 @@ documents the socket-bound-token, push-only-stats, and unit-materialization real
 3. `npm run lint:purity` is clean.
 4. If wire behaviour changed: `npm run sil` is green, and ideally one HIL matrix pass against a
    board, with any new reality recorded in [`../HIL-FINDINGS.md`](../HIL-FINDINGS.md).
-5. If the codec surface counts changed, [`protocol.md`](./protocol.md) is updated to match.
+5. If the codec surface counts changed,
+   [`../packages/strawberry-client/docs/protocol.md`](../packages/strawberry-client/docs/protocol.md) is
+   updated to match.

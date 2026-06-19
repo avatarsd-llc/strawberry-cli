@@ -1,12 +1,24 @@
-# Release for @avatarsd-llc/strawberry-cli.
+# Release for the strawberry monorepo: publishes BOTH workspace packages
+#   - @avatarsd-llc/strawberry-client (the framework-free library)
+#   - @avatarsd-llc/strawberry-cli (the CLI, depends on the library)
+# to the public npm registry (npmjs.org) on a v* tag, and attaches both tarballs
+# to the GitHub Release.
 #
-# Fires on a v* tag. Regenerates the codec, runs the gate (typecheck + tests),
-# builds, and packs the tarball, then publishes to the public npm registry
-# (npmjs.org) and attaches the .tgz to the GitHub Release.
+# TOKEN-BASED publishing (NODE_AUTH_TOKEN = secrets.NPM_TOKEN), NOT OIDC trusted
+# publishing — deliberately, for now:
+#   npm Trusted Publishing requires the package to ALREADY EXIST on the registry
+#   before a trusted publisher can be configured for it (the Trusted Publisher
+#   setting lives under an existing package's settings). Neither package exists on
+#   npmjs.com yet, so their FIRST publish cannot use OIDC. We use an automation
+#   token now.
+#   FOLLOW-UP (documented): once both packages exist on npmjs.com, configure a
+#   per-package GitHub-Actions Trusted Publisher (repo avatarsd-llc/strawberry-cli,
+#   workflow release.yml) for each, add `permissions: id-token: write`, drop the
+#   NPM_TOKEN, and switch the publish steps to `npm publish --access public` with
+#   no token. Trusted publishing then attaches build provenance automatically.
 #
-# Publishing requires the NPM_TOKEN repo secret (an npmjs.com Automation token for
-# the @avatarsd-llc org). Without it the publish step fails — that secret is the one
-# credential you create. Public-npm installs are anonymous: `npm i @avatarsd-llc/strawberry-cli`.
+# Each publish is GUARDED: if the exact name@version is already on npm, skip it
+# (so re-running a tag, or bumping only one package, is idempotent).
 name: release
 
 on:
@@ -26,40 +38,67 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          # Writes an .npmrc for the public registry and wires NODE_AUTH_TOKEN
-          # as its auth token (consumed by `npm publish` below).
           registry-url: https://registry.npmjs.org
           cache: npm
 
-      - name: Install dependencies
+      - name: Install dependencies (workspace)
         run: npm ci
 
       # Codec is gitignored; regenerate before build/test (ADR-0066 D2).
-      - name: Generate protobuf codec
-        run: npm run proto
+      - name: Generate protobuf codec (strawberry-client)
+        run: npm run proto -w @avatarsd-llc/strawberry-client
 
-      - name: Typecheck
-        run: npx tsc --noEmit
+      # Build the library FIRST: the CLI typecheck/build resolve
+      # '@avatarsd-llc/strawberry-client' through its package exports (dist/*.d.ts),
+      # so the library's dist must exist before tsc/tsup run on the CLI.
+      - name: Build strawberry-client
+        run: npm run build -w @avatarsd-llc/strawberry-client
 
-      - name: Test
-        run: npm test
+      - name: Typecheck (both packages)
+        run: npm run typecheck --workspaces --if-present
 
-      - name: Build
-        run: npm run build
+      - name: Test (both packages)
+        run: npm run test --workspaces --if-present
 
-      - name: Pack tarball
-        run: npm pack
+      - name: Build strawberry-cli
+        run: npm run build -w @avatarsd-llc/strawberry-cli
 
-      # Publishes to the public npm registry. The `files` allowlist in package.json
-      # scopes the payload (dist, bin, skill, proto, docs); --access public makes the
-      # scoped package world-installable. Auth is the NPM_TOKEN Automation secret.
-      - name: Publish to npm
-        run: npm publish --access public
+      # Pack both tarballs into ./artifacts for the GitHub Release attachment.
+      - name: Pack tarballs
+        run: |
+          mkdir -p artifacts
+          npm pack -w @avatarsd-llc/strawberry-client --pack-destination artifacts
+          npm pack -w @avatarsd-llc/strawberry-cli --pack-destination artifacts
+          ls -l artifacts
+
+      # Publish the LIBRARY first (the CLI's dependency). Skip if the exact
+      # version is already on npm.
+      - name: Publish @avatarsd-llc/strawberry-client
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          NAME="@avatarsd-llc/strawberry-client"
+          VER="$(node -p "require('./packages/strawberry-client/package.json').version")"
+          if npm view "$NAME@$VER" version >/dev/null 2>&1; then
+            echo "$NAME@$VER already published — skipping."
+          else
+            npm publish -w "$NAME" --access public
+          fi
 
-      - name: GitHub Release (attach tarball)
+      - name: Publish @avatarsd-llc/strawberry-cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          NAME="@avatarsd-llc/strawberry-cli"
+          VER="$(node -p "require('./packages/strawberry-cli/package.json').version")"
+          if npm view "$NAME@$VER" version >/dev/null 2>&1; then
+            echo "$NAME@$VER already published — skipping."
+          else
+            npm publish -w "$NAME" --access public
+          fi
+
+      - name: GitHub Release (attach both tarballs)
         uses: softprops/action-gh-release@v2
         with:
-          files: '*.tgz'
+          files: 'artifacts/*.tgz'
           generate_release_notes: true

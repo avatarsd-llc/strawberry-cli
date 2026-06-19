@@ -1,0 +1,65 @@
+{
+  "name": "@avatarsd-llc/strawberry-cli",
+  "version": "0.2.0",
+  "description": "Framework-free CLI for the Strawberry (Gorshok-v4) grow controller. Drives the WS+protobuf interface (SEC-001 auth, OTA, WireGuard, grow-unit build) over @avatarsd-llc/strawberry-client.",
+  "license": "Apache-2.0",
+  "author": "Avatars LLC",
+  "homepage": "https://github.com/avatarsd-llc/strawberry-cli#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/avatarsd-llc/strawberry-cli.git",
+    "directory": "packages/strawberry-cli"
+  },
+  "bugs": {
+    "url": "https://github.com/avatarsd-llc/strawberry-cli/issues"
+  },
+  "keywords": [
+    "gorshok",
+    "strawberry",
+    "websocket",
+    "protobuf",
+    "grow-controller",
+    "cli",
+    "claude-skill",
+    "esp32"
+  ],
+  "type": "module",
+  "bin": {
+    "strawberry": "./bin/strawberry-cli.mjs",
+    "strawberry-cli": "./bin/strawberry-cli.mjs"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "skill",
+    "docs",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "sil": "npm run build -w @avatarsd-llc/strawberry-client && npm run build && node sil/run-sil.mjs",
+    "sil:mock": "node sil/mock-board.mjs"
+  },
+  "dependencies": {
+    "@avatarsd-llc/strawberry-client": "^0.1.0"
+  },
+  "peerDependencies": {
+    "ws": "^8"
+  },
+  "peerDependenciesMeta": {
+    "ws": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
