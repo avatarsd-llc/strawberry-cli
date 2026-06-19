@@ -2,7 +2,7 @@
  * A tiny, zero-dependency argv parser for strawberry-cli.
  *
  * Framework-free by mandate (no commander/yargs): the CLI is the third consumer
- * of @avatarsd-llc/device-client and stays dependency-light so it ships as a
+ * of @avatarsd-llc/strawberry-cli and stays dependency-light so it ships as a
  * self-contained bin. Supports `--flag value`, `--flag=value`, repeated flags
  * (collected into an array), and bare `--bool` switches. Positional arguments
  * (the command path + free args) are returned in order.

@@ -1,4 +1,4 @@
-# Release for @avatarsd-llc/device-client.
+# Release for @avatarsd-llc/strawberry-cli.
 #
 # Fires on a v* tag. Regenerates the codec, runs the gate (typecheck + tests),
 # builds, and packs the tarball, then publishes to GitHub Packages

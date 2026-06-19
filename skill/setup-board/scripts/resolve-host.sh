@@ -10,7 +10,7 @@
 #   resolve-host.sh --host 10.5.60.121                            # trust a known IP
 #
 # Prints the ws URL (ws://<ip>/ws) to stdout on success; nothing + non-zero on failure.
-# Requires the `strawberry` CLI on PATH (provided by @avatarsd-llc/device-client).
+# Requires the `strawberry` CLI on PATH (provided by @avatarsd-llc/strawberry-cli).
 set -euo pipefail
 
 CIDR="" MAC="" HOST=""

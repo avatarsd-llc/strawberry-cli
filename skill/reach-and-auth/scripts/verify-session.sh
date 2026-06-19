@@ -17,7 +17,7 @@ HOST="${1:?usage: verify-session.sh <ws-host> <token-file>}"
 TOKEN_FILE="${2:?usage: verify-session.sh <ws-host> <token-file>}"
 
 if ! command -v strawberry >/dev/null 2>&1; then
-  echo "verify-session: 'strawberry' CLI not on PATH (provided by @avatarsd-llc/device-client)" >&2
+  echo "verify-session: 'strawberry' CLI not on PATH (provided by @avatarsd-llc/strawberry-cli)" >&2
   exit 127
 fi
 

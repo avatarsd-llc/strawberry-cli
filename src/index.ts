@@ -1,5 +1,5 @@
 /**
- * `@avatarsd-llc/device-client` — the shared, framework-free Strawberry client.
+ * `@avatarsd-llc/strawberry-cli` — the shared, framework-free Strawberry client.
  *
  * One library, three consumers (ADR-0066 R3): the web-ui SPA, the Pulumi deploy
  * provider, and strawberry-cli. The core is transport- and codec-agnostic

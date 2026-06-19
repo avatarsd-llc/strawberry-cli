@@ -19,7 +19,7 @@ flow consumes:
   to ride out the reboots that OTA and flag changes cause.
 
 Everything below drives `strawberry-cli`, the thin front end over the shared
-`@avatarsd-llc/device-client` library (the one WS+protobuf core, ADR-0066). Do not hand-roll the
+`@avatarsd-llc/strawberry-cli` library (the one WS+protobuf core, ADR-0066). Do not hand-roll the
 wire protocol or the HMAC — the CLI already is that code.
 
 ## Contract
@@ -231,6 +231,6 @@ next command.
 
 - Orchestrator: `setup-board` (sequences this skill first).
 - Index + ground rules: `skills/README.md`.
-- Library: `@avatarsd-llc/device-client` — the WS+protobuf core the CLI is built on
+- Library: `@avatarsd-llc/strawberry-cli` — the WS+protobuf core the CLI is built on
   (ADR-0066 in `strawberry-fw/doc/adr/`). The SEC-001 handshake this skill drives is
   `ws.service.ts login()/tryResume()/logout()` ported framework-free.

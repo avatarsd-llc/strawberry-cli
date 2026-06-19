@@ -1,5 +1,5 @@
 /**
- * `@avatarsd-llc/device-client/design` — the browser-safe, transport-free model
+ * `@avatarsd-llc/strawberry-cli/design` — the browser-safe, transport-free model
  * subpath (ADR-0066 D6/D8). These are PURE blueprints (Control Box, grow.types,
  * unit-design, controller-kinds, ...) with no WS/DI/codec dependency, so the SPA
  * tree-shakes them and the CLI / Pulumi provider reuse them verbatim.

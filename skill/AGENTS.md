@@ -30,7 +30,7 @@ each `<name>/SKILL.md` on its own.
 ## How these skills work
 
 Every skill is a **thin wrapper over the `strawberry` CLI** — it adds no second client.
-The CLI is a front end over the shared `@avatarsd-llc/device-client` library (the one
+The CLI is a front end over the shared `@avatarsd-llc/strawberry-cli` library (the one
 WS+protobuf core; ADR-0066). Discover the command vocabulary from `strawberry help
 --json` rather than hard-coding it — the tree is generated from the library's live
 protobuf enums.

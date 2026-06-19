@@ -12,7 +12,7 @@ description: >
 # config-hardware
 
 Persist a board's hardware calibration and boot-time subsystem enables, gated to what the hardware
-actually has. Drives `strawberry-cli` (from `@avatarsd-llc/device-client`) over the device
+actually has. Drives `strawberry-cli` (from `@avatarsd-llc/strawberry-cli`) over the device
 WS+protobuf surface. No firmware, no serial, no direct WS — every action is a CLI verb.
 
 ## When to use

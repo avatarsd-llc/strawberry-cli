@@ -15,7 +15,7 @@ description: >
 
 This is the **orchestrator**. It does not implement board operations itself; it sequences the
 per-step skills, each of which drives `strawberry-cli`. The CLI is a thin front end over the
-shared `@avatarsd-llc/device-client` library (the one WS+protobuf core, ADR-0066).
+shared `@avatarsd-llc/strawberry-cli` library (the one WS+protobuf core, ADR-0066).
 
 ## Contract
 
@@ -260,5 +260,5 @@ The orchestrator is resumable; do not restart from zero on a transient failure.
   `scripts/dwell-3x.sh` (reboot-recovery gate). Both wrap `strawberry`; zero extra deps.
 - Per-step skills: `reach-and-auth`, `provision-network`, `flash-ota`, `config-hardware`,
   `build-grow-unit`, `import-export`, `diagnose` (sibling dirs under `skills/`).
-- Library: `@avatarsd-llc/device-client` — the shared WS+protobuf core the CLI is built on
+- Library: `@avatarsd-llc/strawberry-cli` — the shared WS+protobuf core the CLI is built on
   (ADR-0066 in `strawberry-fw/doc/adr/`).

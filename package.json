@@ -1,5 +1,5 @@
 {
-  "name": "@avatarsd-llc/device-client",
+  "name": "@avatarsd-llc/strawberry-cli",
   "version": "0.1.0",
   "description": "Open-source, framework-free TypeScript client for the Strawberry (Gorshok-v4) grow controller WS+protobuf interface. One library for the web UI SPA, the Pulumi deploy provider, the strawberry-cli, and a Claude Code agent-skill.",
   "license": "Apache-2.0",

@@ -19,7 +19,7 @@ unit container  ->  IO endpoints  ->  controller graph  ->  schedule  ->  (optio
 ```
 
 Everything is driven through `strawberry-cli` (the thin front end over the shared
-`@avatarsd-llc/device-client` WS+protobuf core, ADR-0066). This skill never re-implements the
+`@avatarsd-llc/strawberry-cli` WS+protobuf core, ADR-0066). This skill never re-implements the
 wire protocol — it issues CLI verbs and reads them back.
 
 ## Prerequisites (do these first; do not skip)

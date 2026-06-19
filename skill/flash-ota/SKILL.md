@@ -12,7 +12,7 @@ description: >
 
 Flash the board to a target revision over the existing WebSocket (no separate HTTP/POST path,
 no USB) and **prove** the reboot recovered cleanly before declaring success. Everything here runs
-through `strawberry-cli`, the thin front end over `@avatarsd-llc/device-client` (the shared
+through `strawberry-cli`, the thin front end over `@avatarsd-llc/strawberry-cli` (the shared
 WS+protobuf core, ADR-0066). This skill supersedes `tools/ota_upload.py` (push OTA),
 `tools/ota_update.py` (URL-pull OTA), and `tools/ota_check.py` (post-flash poll).
 
@@ -200,4 +200,4 @@ scripts/validate-dwell-3x.sh --host "$HOST" --token-file "$TOKEN" \
   Follow-up health: `diagnose`.
 - OTA wire + image packing: `strawberry-fw/doc/ota_tooling.md`; packers
   `tools/mk_spa_partition.py`, `tools/mk_combined.py` (kept; only the upload path moves to the CLI).
-- Library: `@avatarsd-llc/device-client` — the shared WS+protobuf core (ADR-0066).
+- Library: `@avatarsd-llc/strawberry-cli` — the shared WS+protobuf core (ADR-0066).

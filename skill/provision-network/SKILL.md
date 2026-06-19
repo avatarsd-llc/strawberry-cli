@@ -12,7 +12,7 @@ description: >
 
 Take an **authenticated** board off SoftAP and onto the operator LAN, optionally onto the
 Home-Assistant MQTT bus and the WireGuard overlay. Every operation here goes through
-`strawberry-cli`, the headless front end over the shared `@avatarsd-llc/device-client` library
+`strawberry-cli`, the headless front end over the shared `@avatarsd-llc/strawberry-cli` library
 (the one WS+protobuf core, ADR-0066). This skill supersedes the hand-rolled
 `strawberry-fw/tools/wg_provision.py`.
 
@@ -243,5 +243,5 @@ strawberry query wireguard --host "$HOST" --json    # WgConfig: enabled, has_pri
 - `config-hardware` — subsystem flags + hardware calibration, runs after the board is on the LAN.
 - `setup-board` — the orchestrator that sequences this skill between `reach-and-auth` and
   `flash-ota`.
-- Library: `@avatarsd-llc/device-client` (ADR-0066). Superseded tool:
+- Library: `@avatarsd-llc/strawberry-cli` (ADR-0066). Superseded tool:
   `strawberry-fw/tools/wg_provision.py`.

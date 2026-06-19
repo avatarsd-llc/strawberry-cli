@@ -1,5 +1,5 @@
 /**
- * strawberry-cli — a framework-free CLI over @avatarsd-llc/device-client.
+ * strawberry-cli — a framework-free CLI over @avatarsd-llc/strawberry-cli.
  *
  * The third consumer of the shared lib (ADR-0066 R3): every command opens a
  * DeviceClient session (Node ws transport + 0600 FileTokenStore), runs SEC-001
