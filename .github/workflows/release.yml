@@ -1,9 +1,12 @@
-# Release for @avatarsd-llc/strawberry-cli.
+# Release for @avatarsd-llc/device-client.
 #
 # Fires on a v* tag. Regenerates the codec, runs the gate (typecheck + tests),
-# builds, and packs the tarball. Publishes to npm only when the NPM_TOKEN secret
-# is present; otherwise it skips the publish and just attaches the .tgz to the
-# GitHub Release so the artifact is never lost.
+# builds, and packs the tarball, then publishes to GitHub Packages
+# (npm.pkg.github.com) and attaches the .tgz to the GitHub Release.
+#
+# No manually-created credential is required: the publish authenticates with the
+# automatic GITHUB_TOKEN, which `permissions.packages: write` scopes for publish.
+# The package scope (@avatarsd-llc) must match the repo owner — it does.
 name: release
 
 on:
@@ -12,22 +15,22 @@ on:
       - 'v*'
 
 permissions:
-  contents: write
+  contents: write   # softprops/action-gh-release creates the GitHub Release
+  packages: write   # npm publish -> GitHub Packages via GITHUB_TOKEN
 
 jobs:
   release:
     runs-on: ubuntu-latest
-    # Hoisted to job scope so the publish-vs-skip `if:` guards can read it
-    # (secrets are not directly referenceable in `if:` expressions).
-    env:
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
+          # Writes an .npmrc pointing the @avatarsd-llc scope at GitHub Packages
+          # and wires NODE_AUTH_TOKEN as the auth token for that host.
+          registry-url: https://npm.pkg.github.com
+          scope: '@avatarsd-llc'
           cache: npm
 
       - name: Install dependencies
@@ -49,17 +52,13 @@ jobs:
       - name: Pack tarball
         run: npm pack
 
-      # Publish only if the org secret is configured. The `files` allowlist in
-      # package.json scopes the published payload (dist, bin, skill, proto, docs).
-      - name: Publish to npm
-        if: ${{ env.NPM_TOKEN != '' }}
-        run: npm publish --access public
+      # Publishes to GitHub Packages. The `files` allowlist in package.json scopes
+      # the payload (dist, bin, skill, proto, docs); publishConfig.registry pins
+      # the target registry. Auth is the automatic per-run GITHUB_TOKEN.
+      - name: Publish to GitHub Packages
+        run: npm publish
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Skipped publish notice
-        if: ${{ env.NPM_TOKEN == '' }}
-        run: echo "NPM_TOKEN not set; skipping npm publish and attaching the tarball only."
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: GitHub Release (attach tarball)
         uses: softprops/action-gh-release@v2
