@@ -3,7 +3,7 @@ name: reach-and-auth
 description: >
   Reach a Gorshok-v4 board on the LAN and establish an authenticated session: discover
   candidates by WS probe (firmware has NO mDNS), confirm the target by MAC (DHCP drifts),
-  perform the SEC-001 HMAC challenge-response login, and persist the returned token to a
+  perform the HMAC challenge-response login, and persist the returned token to a
   0600 FileTokenStore so the session resumes across reboots. The mandatory first step every
   other board skill depends on. Use when asked to find/reach/connect to a board, log in,
   authenticate, or establish a session before any other board operation.
@@ -15,18 +15,18 @@ The mandatory first step for every other board skill. It produces two things the
 flow consumes:
 
 - **`$HOST`** — the `ws://<ip>/ws` of the confirmed target board.
-- **a 0600 token file** — a SEC-001 session token that later steps replay with `auth resume`
+- **a 0600 token file** — a HMAC session token that later steps replay with `auth resume`
   to ride out the reboots that OTA and flag changes cause.
 
 Everything below drives `strawberry-cli`, the thin front end over the shared
-`@avatarsd-llc/strawberry-client` library (the one WS+protobuf core, ADR-0066). Do not hand-roll the
+`@avatarsd-llc/strawberry-client` library (the one WS+protobuf core). Do not hand-roll the
 wire protocol or the HMAC — the CLI already is that code.
 
 ## Contract
 
 - **Input:**
   - how to reach the board: a known IP, **and/or** a `--cidr` to scan, **and/or** a `--mac` to
-    confirm the right one (e.g. `e4:b3:23:90:ab:48`);
+    confirm the right one (e.g. `aa:bb:cc:dd:ee:ff`);
   - the board's password, supplied as a `--password-file <f>` or via `$STRAWBERRY_PASSWORD`
     (never inline on the command line — it lands in shell history).
 - **Output:** a confirmed `$HOST` and a token file written mode **0600**, with `auth resume`
@@ -34,7 +34,7 @@ wire protocol or the HMAC — the CLI already is that code.
 - **Non-negotiables:**
   - Locate the board **by MAC** — DHCP leases drift, and a stale IP looks like a crash but isn't.
   - The firmware ships **no mDNS** — discovery is WS-probing candidate IPs, not a name lookup.
-  - **SEC-001 only** — the plaintext password never crosses the wire. The CLI sends
+  - **HMAC only** — the plaintext password never crosses the wire. The CLI sends
     `HMAC-SHA256(password, server-nonce)` (pure-JS, because `crypto.subtle` is undefined over
     plain http).
   - Token file mode **0600** — it is a bearer credential.
@@ -61,14 +61,14 @@ reported as `ip / mac / board_rev`.
 
 ```bash
 # Scan a subnet and confirm the one board you want by MAC:
-strawberry discover --cidr 10.5.60.0/24 --mac e4:b3:23:90:ab:48 --json
+strawberry discover --cidr 192.0.2.0/24 --mac aa:bb:cc:dd:ee:ff --json
 ```
 
 Variations:
 
 ```bash
-strawberry discover --cidr 10.5.60.0/24 --json     # enumerate every reachable board on the subnet
-strawberry discover --mac e4:b3:23:90:ab:48 --json # confirm a board whose IP you already think you know
+strawberry discover --cidr 192.0.2.0/24 --json     # enumerate every reachable board on the subnet
+strawberry discover --mac aa:bb:cc:dd:ee:ff --json # confirm a board whose IP you already think you know
 ```
 
 **Disambiguate by MAC, always.** If the scan returns several rows, the target is the one whose
@@ -77,25 +77,25 @@ strawberry discover --mac e4:b3:23:90:ab:48 --json # confirm a board whose IP yo
 
 ```bash
 # Pin the confirmed target for every later command. Example value:
-HOST=ws://10.5.60.177/ws
+HOST=ws://192.0.2.177/ws
 ```
 
-`--host` accepts a bare host (`10.5.60.177`), `host:port`, or a full `ws(s)://.../ws` URL; the CLI
+`--host` accepts a bare host (`192.0.2.177`), `host:port`, or a full `ws(s)://.../ws` URL; the CLI
 normalizes it (`DeviceClient.forWsHost`). Using the full `ws://<ip>/ws` form is the least
 ambiguous.
 
 **Fresh board only in SoftAP?** A factory board with no Wi-Fi creds brings up its own AP. Join that
 AP from the host machine first, then `discover` on the SoftAP subnet (commonly `192.168.4.0/24`).
-The ADR-0060 QR claim handshake is **design-only** — there is no claim wire surface on the firmware
+The QR claim handshake is **design-only** — there is no claim wire surface on the firmware
 yet, so today this is just "join the AP, then proceed as normal".
 
 **Gate to clear:** exactly one candidate whose `mac` matches the target; `$HOST` set to its
 `ws://<ip>/ws`.
 
-## Step 2 — SEC-001 login (plaintext never crosses the wire)
+## Step 2 — HMAC login (plaintext never crosses the wire)
 
 Log in with the challenge-response handshake and persist the returned token. The CLI performs the
-full SEC-001 exchange for you:
+full HMAC exchange for you:
 
 1. `AuthChallengeReq` -> `AuthChallenge{nonce}` (a single-use server nonce),
 2. compute `HMAC-SHA256(password, nonce)` locally (pure-JS), send only the digest in
@@ -213,7 +213,7 @@ actually established — go back to Step 2.
 The `_login()` / `ws_authenticate()` HMAC handshake helper that was copy-pasted across
 `strawberry-fw/tools/ota_check.py`, `verify_grow.py`, `verify_orphans.py`, and `wg_provision.py`.
 Those re-login every run and have no token persistence; this skill establishes one resumable
-session over the shared library's single SEC-001 implementation.
+session over the shared library's single HMAC implementation.
 
 ## Hand-off to the next skill
 
@@ -231,6 +231,5 @@ next command.
 
 - Orchestrator: `setup-board` (sequences this skill first).
 - Index + ground rules: `skills/README.md`.
-- Library: `@avatarsd-llc/strawberry-client` — the WS+protobuf core the CLI is built on
-  (ADR-0066 in `strawberry-fw/doc/adr/`). The SEC-001 handshake this skill drives is
+- Library: `@avatarsd-llc/strawberry-client` — the WS+protobuf core the CLI is built on. The HMAC handshake this skill drives is
   `ws.service.ts login()/tryResume()/logout()` ported framework-free.

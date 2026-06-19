@@ -13,7 +13,7 @@
 # Requires: `strawberry` on PATH, `jq`, and an authed session for $HOST. Resolve
 # $HOST by MAC first (DHCP drifts) via the strawberry-reach-and-auth skill.
 #
-# Usage:  ./verify-unit.sh <host> <unit-id>     e.g.  ./verify-unit.sh 10.5.60.177 grow.1
+# Usage:  ./verify-unit.sh <host> <unit-id>     e.g.  ./verify-unit.sh 192.0.2.177 grow.1
 set -euo pipefail
 
 HOST=${1:?usage: verify-unit.sh <host> <unit-id>}

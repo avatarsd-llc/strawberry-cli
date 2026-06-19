@@ -19,7 +19,7 @@ each `<name>/SKILL.md` on its own.
 | Skill | What it drives |
 |-------|----------------|
 | [`setup-board`](./setup-board/SKILL.md) | Orchestrator: fresh board -> running+configured, sequencing all of the below. |
-| [`reach-and-auth`](./reach-and-auth/SKILL.md) | Discover by MAC (WS probe, no mDNS), SEC-001 HMAC login, persist a 0600 token. |
+| [`reach-and-auth`](./reach-and-auth/SKILL.md) | Discover by MAC (WS probe, no mDNS), HMAC login, persist a 0600 token. |
 | [`provision-network`](./provision-network/SKILL.md) | Wi-Fi STA, optional HA MQTT, optional WireGuard fleet join. |
 | [`flash-ota`](./flash-ota/SKILL.md) | OTA app/spa/combined over WS, validated dwell+3x. |
 | [`config-hardware`](./config-hardware/SKILL.md) | Persisted hardware config, boot subsystem flags, 1-Wire IO boards. |
@@ -31,7 +31,7 @@ each `<name>/SKILL.md` on its own.
 
 Every skill is a **thin wrapper over the `strawberry` CLI** — it adds no second client.
 The CLI is a front end over the shared `@avatarsd-llc/strawberry-client` library (the one
-WS+protobuf core; ADR-0066). Discover the command vocabulary from `strawberry help
+WS+protobuf core). Discover the command vocabulary from `strawberry help
 --json` rather than hard-coding it — the tree is generated from the library's live
 protobuf enums.
 
@@ -39,7 +39,7 @@ protobuf enums.
 
 - Locate the board **by MAC** — DHCP leases drift; a stale IP looks like a crash but isn't.
 - The firmware ships **no mDNS**; discovery is WS-probing candidate IPs.
-- **SEC-001** login only — the plaintext password never crosses the wire.
+- **HMAC** login only — the plaintext password never crosses the wire.
 - **Destructive steps** (factory-reset, grow-erase, OTA) reboot the unit — stop for human sign-off.
 - Validate any reboot with **dwell+3x** (reboot landed, `system_mode=NORMAL`, pushes resumed).
 - Keep WS clients **<= 2** to avoid the C6 httpd multi-client wedge.

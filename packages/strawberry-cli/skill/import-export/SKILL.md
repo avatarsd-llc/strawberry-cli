@@ -24,7 +24,7 @@ Round-trip a unit (or whole device) to JSON and back losslessly, with secrets re
 - `strawberry device export --host <ip> [--include-secrets] [--file <F>]` ;
   `strawberry device import --host <ip> --file <F>` — redact-by-default envelope.
 
-## Underlying wire (per ADR-0066 D9/H7/H8)
+## Underlying wire
 
 - **export** reads via `Query{WHAT_GROW_CONFIG}` + `ControllerListReq` + `GrowUserIoListReq` +
   `ControlBoxGet`.

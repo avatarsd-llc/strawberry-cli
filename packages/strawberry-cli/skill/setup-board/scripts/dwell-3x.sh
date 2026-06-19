@@ -9,7 +9,7 @@
 # reboots, flag change + reboot).
 #
 # Usage:
-#   dwell-3x.sh --host ws://10.5.60.121/ws [--token-file ~/.strawberry/board.token] \
+#   dwell-3x.sh --host ws://192.0.2.121/ws [--token-file ~/.strawberry/board.token] \
 #               [--dwell 12] [--interval 4] [--confirms 3]
 #
 # Exit 0 only when the board answered query stats `--confirms` consecutive times with

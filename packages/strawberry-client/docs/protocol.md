@@ -157,7 +157,7 @@ families (by tag):
 `Ack` carries `{ ok, detail }`; a failed command may reply with `Ack{ok:false}` **or** with
 `ErrorMsg{code, detail}` depending on the path — a robust client handles both.
 
-## Authentication — SEC-001 HMAC challenge-response
+## Authentication — HMAC challenge-response
 
 The plaintext password never crosses the wire. The flow:
 

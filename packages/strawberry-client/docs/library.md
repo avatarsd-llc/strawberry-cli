@@ -29,7 +29,7 @@ import { NodeWsTransport } from '@avatarsd-llc/strawberry-client/node';
 import { FileTokenStore } from '@avatarsd-llc/strawberry-client/node';
 import { wsUrlForHost } from '@avatarsd-llc/strawberry-client';
 
-const transport = await NodeWsTransport.create(wsUrlForHost('10.5.60.177'));
+const transport = await NodeWsTransport.create(wsUrlForHost('192.0.2.177'));
 const client = new DeviceClient({
   transport,
   tokenStore: new FileTokenStore('./board.token'),
@@ -38,7 +38,7 @@ const client = new DeviceClient({
 });
 
 await client.connect();                 // opens the socket; auto-resumes a stored token
-if (!client.isAuthed()) await client.login('my-password');   // SEC-001 HMAC
+if (!client.isAuthed()) await client.login('my-password');   // HMAC
 
 const wifi = await client.query<'wifi'>(Query_What.WIFI);    // typed reply
 if (wifi.oneofKind === 'wifi') console.log(wifi.wifi.ip);
@@ -58,7 +58,7 @@ Identical API; construct `WsTransport` (or `DeviceClient.forWsHost(host)`) — t
 
 ```ts
 import { DeviceClient } from '@avatarsd-llc/strawberry-client';
-const client = DeviceClient.forWsHost('10.5.60.177');   // global WebSocket + protobuf codec
+const client = DeviceClient.forWsHost('192.0.2.177');   // global WebSocket + protobuf codec
 await client.connect();
 await client.login('my-password');
 ```
@@ -74,7 +74,7 @@ new DeviceClient(opts: DeviceClientOptions)
 | `transport` | (required) | the byte-pipe seam (below) |
 | `codec` | `ProtobufWsCodec` | proto<->bytes seam |
 | `requestMode` | `'concurrent'` | `'concurrent'` (rid map, overlapping requests) or `'sequential'` (one in-flight) |
-| `tokenStore` | `MemoryTokenStore` | SEC-001 token persistence seam |
+| `tokenStore` | `MemoryTokenStore` | HMAC token persistence seam |
 | `requestTimeoutMs` | `8000` | default reply window for `send` |
 | `autoReconnect` | `true` | reconnect (exponential backoff 500 ms..15 s) after an unexpected close |
 | `onStaleClient` | — | called once on `ERR_STALE_CLIENT` (UI reload hook) |
@@ -91,7 +91,7 @@ codec for a bare host / `host:port` / `ws(s)://` URL.
 - `bootOffsetMs()` — `Date.now() - serverNowMs` captured at `AuthOk` (unreliable on current
   firmware, which reports `serverNowMs == 0`).
 
-### Auth (SEC-001)
+### Auth (HMAC)
 
 - `login(password, desiredTtlMs = 0): Promise<void>` — full challenge-response:
   `AuthChallengeReq` -> `AuthChallenge{nonce}` -> `HMAC-SHA256(password, nonce)` (pure-JS) ->
@@ -231,7 +231,7 @@ interface Codec {
 types). `DeviceClient` exchanges only decoded objects with the codec, so a TLV codec drops in
 with no change to the client, the builders, or any consumer.
 
-### TokenStore (SEC-001 token persistence)
+### TokenStore (HMAC token persistence)
 
 ```ts
 interface TokenStore {
@@ -246,7 +246,7 @@ Implementations: `MemoryTokenStore` (default), `LocalStorageTokenStore` (browser
 
 ## HMAC primitive
 
-`hmacSha256Password(password: string, nonce: Uint8Array): Promise<Uint8Array>` — the SEC-001
+`hmacSha256Password(password: string, nonce: Uint8Array): Promise<Uint8Array>` — the HMAC
 client primitive. The password is the HMAC key (UTF-8 bytes), the nonce the message; returns the
 32-byte digest. It is a **pure-JS** HMAC-SHA256 (not `crypto.subtle`) because the device is
 served over plain HTTP where `crypto.subtle` is `undefined` in a browser. The async signature is

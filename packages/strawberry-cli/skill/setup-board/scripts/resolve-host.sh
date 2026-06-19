@@ -6,8 +6,8 @@
 # step that can move the lease (Wi-Fi join, reboot, OTA).
 #
 # Usage:
-#   resolve-host.sh --cidr 10.5.60.0/24 --mac e4:b3:23:90:ab:48   # discover by MAC
-#   resolve-host.sh --host 10.5.60.121                            # trust a known IP
+#   resolve-host.sh --cidr 192.0.2.0/24 --mac aa:bb:cc:dd:ee:ff   # discover by MAC
+#   resolve-host.sh --host 192.0.2.121                            # trust a known IP
 #
 # Prints the ws URL (ws://<ip>/ws) to stdout on success; nothing + non-zero on failure.
 # Requires the `strawberry` CLI on PATH (provided by @avatarsd-llc/strawberry-cli).

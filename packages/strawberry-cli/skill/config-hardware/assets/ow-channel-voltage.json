@@ -1,5 +1,5 @@
 {
-  "_comment": "Example OwChannelConfig (ADR-0052) for `strawberry ow-config apply --channel`. Mirrors OwChannelConfig in components/proto/messages.proto:1231. `channel` is P0..P3 (DS2450 ADC) or C0/C1 (DS2423). `mode` is an OwMode string (messages.proto:1158). `capabilities` is server-owned and IGNORED on Set — do not set it; the firmware rejects a mode the channel's read-only capability bitmask (from `ow-config get`) does not allow. Only the settings block matching `mode` is read.",
+  "_comment": "Example OwChannelConfig for `strawberry ow-config apply --channel`. Mirrors OwChannelConfig in components/proto/messages.proto:1231. `channel` is P0..P3 (DS2450 ADC) or C0/C1 (DS2423). `mode` is an OwMode string (messages.proto:1158). `capabilities` is server-owned and IGNORED on Set — do not set it; the firmware rejects a mode the channel's read-only capability bitmask (from `ow-config get`) does not allow. Only the settings block matching `mode` is read.",
   "channel": "P0",
   "mode": "OW_MODE_VOLTAGE",
   "adc": {

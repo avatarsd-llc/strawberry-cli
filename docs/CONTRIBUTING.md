@@ -26,7 +26,7 @@ devDeps; each package owns its own `package.json`, `tsup.config.ts`, `tsconfig.j
 | `packages/strawberry-client/` | **the library** `@avatarsd-llc/strawberry-client` (v0.1.0) |
 | `packages/strawberry-client/src/core/` | `DeviceClient`, `PushBus`, codec/token seams |
 | `packages/strawberry-client/src/wire/` | transport seam + WS implementations + frame framing |
-| `packages/strawberry-client/src/auth/` | pure-JS SEC-001 HMAC |
+| `packages/strawberry-client/src/auth/` | pure-JS HMAC |
 | `packages/strawberry-client/src/api/commands.ts` | typed 1:1-with-proto command builders |
 | `packages/strawberry-client/src/proto/` | **generated** protobuf-ts codec (gitignored; see below) |
 | `packages/strawberry-client/proto/messages.proto` | **vendored** schema (source of truth for the codec) |
@@ -131,7 +131,7 @@ every row meets its expectation. This is the host-runnable twin of the HIL matri
 ### 3. HIL (hardware-in-the-loop) — `packages/strawberry-cli/scripts/hil-matrix.mjs`
 
 ```bash
-node packages/strawberry-cli/scripts/hil-matrix.mjs --host 10.5.60.177 --password-file ./board.pass
+node packages/strawberry-cli/scripts/hil-matrix.mjs --host 192.0.2.177 --password-file ./board.pass
 ```
 
 Exercises every CLI command against a **live board**. Tiers per row:

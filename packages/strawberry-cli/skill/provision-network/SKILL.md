@@ -13,7 +13,7 @@ description: >
 Take an **authenticated** board off SoftAP and onto the operator LAN, optionally onto the
 Home-Assistant MQTT bus and the WireGuard overlay. Every operation here goes through
 `strawberry-cli`, the headless front end over the shared `@avatarsd-llc/strawberry-client` library
-(the one WS+protobuf core, ADR-0066). This skill supersedes the hand-rolled
+(the one WS+protobuf core). This skill supersedes the hand-rolled
 `strawberry-fw/tools/wg_provision.py`.
 
 ## Prerequisites
@@ -22,7 +22,7 @@ Home-Assistant MQTT bus and the WireGuard overlay. Every operation here goes thr
    need a `$HOST` (the `ws://<ip>/ws` confirmed **by MAC** — DHCP leases drift, so a known IP is
    not enough) and a 0600 `--token-file` so the session survives the reconnects that a Wi-Fi
    switch causes.
-2. **The board's MAC is known** (e.g. `e4:b3:23:90:ab:48`). The moment the board joins a new
+2. **The board's MAC is known** (e.g. `aa:bb:cc:dd:ee:ff`). The moment the board joins a new
    network its DHCP IP changes; you re-find it **by MAC**, not by remembering the old IP.
 3. **Inputs to hand:**
    - Wi-Fi: target `--ssid` and `--wifi-pass`.
@@ -39,10 +39,10 @@ Home-Assistant MQTT bus and the WireGuard overlay. Every operation here goes thr
 Set a shell var for the session so every command is copy-pasteable:
 
 ```bash
-HOST=ws://10.5.60.177/ws        # the MAC-confirmed target from reach-and-auth
+HOST=ws://192.0.2.177/ws        # the MAC-confirmed target from reach-and-auth
 TOK=./board.token               # the 0600 token file from reach-and-auth
-MAC=e4:b3:23:90:ab:48           # used to re-find the board after the IP moves
-CIDR=10.5.60.0/24               # operator LAN to re-scan after Wi-Fi join
+MAC=aa:bb:cc:dd:ee:ff           # used to re-find the board after the IP moves
+CIDR=192.0.2.0/24               # operator LAN to re-scan after Wi-Fi join
 ```
 
 ## Non-negotiables
@@ -53,7 +53,7 @@ CIDR=10.5.60.0/24               # operator LAN to re-scan after Wi-Fi join
   loop before opening another session.
 - **Resume, don't re-login.** After any reconnect, replay the stored token
   (`strawberry auth resume`) rather than logging in fresh.
-- **Plaintext secrets never cross the wire** for auth (SEC-001 HMAC). Note this does **not**
+- **Plaintext secrets never cross the wire** for auth (HMAC). Note this does **not**
   apply to provisioning payloads: the Wi-Fi PSK, MQTT password and WireGuard private key are sent
   as field values inside the authenticated, framed `WifiSet`/`HaSet`/`WgSet` messages — keep the
   `.conf` and any password files out of shell history and at mode 0600.
@@ -110,7 +110,7 @@ Only if the operator wants HA integration. Enable and point at the broker:
 ```bash
 strawberry net ha --host "$HOST" \
   --enabled \
-  --mqtt-uri  "mqtt://10.5.60.10:1883" \
+  --mqtt-uri  "mqtt://192.0.2.10:1883" \
   --mqtt-user "homeassistant" \
   --mqtt-pass "$(cat ./mqtt.pass)" \
   --prefix    "homeassistant"
@@ -239,9 +239,9 @@ strawberry query wireguard --host "$HOST" --json    # WgConfig: enabled, has_pri
 
 ## See also
 
-- `reach-and-auth` — the mandatory predecessor (discover + SEC-001 login + token persist).
+- `reach-and-auth` — the mandatory predecessor (discover + HMAC login + token persist).
 - `config-hardware` — subsystem flags + hardware calibration, runs after the board is on the LAN.
 - `setup-board` — the orchestrator that sequences this skill between `reach-and-auth` and
   `flash-ota`.
-- Library: `@avatarsd-llc/strawberry-client` (ADR-0066). Superseded tool:
+- Library: `@avatarsd-llc/strawberry-client`. Superseded tool:
   `strawberry-fw/tools/wg_provision.py`.

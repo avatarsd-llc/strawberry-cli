@@ -4,8 +4,8 @@ description: >
   Compose a Gorshok-v4 cultivation unit end to end via strawberry-cli: create the unit
   container, add its user-defined IO endpoints (full id <unit_id>.<name>), atomically
   apply the controller dataflow graph (create + wire in one rollback-safe frame, idempotent
-  re-bind), push the working schedule (real-day scheduler, ADR-0035), and optionally set the
-  per-unit Control Box HMI blob (ADR-0059). Use when asked to build/create/wire a grow unit,
+  re-bind), push the working schedule (real-day scheduler), and optionally set the
+  per-unit Control Box HMI blob. Use when asked to build/create/wire a grow unit,
   add IO endpoints to a unit, apply or edit a controller graph, push a unit schedule, or set
   a Control Box on a Gorshok / strawberry-fw board.
 ---
@@ -19,14 +19,14 @@ unit container  ->  IO endpoints  ->  controller graph  ->  schedule  ->  (optio
 ```
 
 Everything is driven through `strawberry-cli` (the thin front end over the shared
-`@avatarsd-llc/strawberry-client` WS+protobuf core, ADR-0066). This skill never re-implements the
+`@avatarsd-llc/strawberry-client` WS+protobuf core). This skill never re-implements the
 wire protocol — it issues CLI verbs and reads them back.
 
 ## Prerequisites (do these first; do not skip)
 
 - **An authenticated session to the target board.** Run the `strawberry-reach-and-auth` skill
   first: discover the board, confirm it **by MAC** (DHCP leases drift — a stale IP looks like a
-  crash but isn't; e.g. `e4:b3:23:90:ab:48`), SEC-001 HMAC login, and persist the token to a
+  crash but isn't; e.g. `aa:bb:cc:dd:ee:ff`), HMAC login, and persist the token to a
   **0600** token file. Every command below takes `--host <ip>` and an authenticated session
   (token file or `$STRAWBERRY_PASSWORD`).
 - **Know the board's capabilities.** A unit's controllers must wire to endpoints that resolve to
@@ -46,15 +46,15 @@ wire protocol — it issues CLI verbs and reads them back.
 Set a host variable for the rest of the skill (replace with the MAC-confirmed IP):
 
 ```bash
-HOST=10.5.60.177            # the ws://<ip>/ws target, confirmed by MAC
-UNIT=grow.1                 # the unit id you are building (the identity, ADR-0006)
+HOST=192.0.2.177            # the ws://<ip>/ws target, confirmed by MAC
+UNIT=grow.1                 # the unit id you are building (the identity)
 ```
 
 ## Field reference (ground truth — `strawberry-fw/components/proto/messages.proto`)
 
 This is the firmware contract the CLI flags map onto. Cite it when shaping JSON files.
 
-- **Unit identity is the string `id`** (`GrowUnit.id`, field 24; ADR-0006). `id` like `grow.1`.
+- **Unit identity is the string `id`** (`GrowUnit.id`, field 24). `id` like `grow.1`.
   `--kind` is a `GrowKind`: `GROW_KIND_SUBSTRATE=0`, `HYDRO_PURE=1`, `HYDRO_SUBSTRATE=2`,
   `AERO=3`, `AQUAPONIC=4`, `AQUARIUM=5`, `WATER=6` (water-station SM base),
   `CUSTOM=7` (bare unit: no scheduler/health/status LED). `--active` sets `GrowUnit.active`
@@ -78,8 +78,8 @@ This is the firmware contract the CLI flags map onto. Cite it when shaping JSON 
   `stages[]` = rows (`GrowProfileStage`: `name`, `values[]` aligned index-for-index with
   `params`, `duration_s`, `flags` bit0=infinite/bit1=manual-advance), `derived_mask` = exposed
   `SCHED_DERIVED_*` outputs. Omitting the schedule keeps the unit's current one. Real-day
-  scheduler (ADR-0035) — run-state/anchor (Start/Pause) stay unit-authoritative.
-- **`ControlBoxSet`** (`messages.proto:1574-1576`): per-unit opaque JSON blob (ADR-0059); the
+  scheduler — run-state/anchor (Start/Pause) stay unit-authoritative.
+- **`ControlBoxSet`** (`messages.proto:1574-1576`): per-unit opaque JSON blob; the
   **firmware stores it but never decodes it** — the web UI owns the structure. Empty `data`
   clears the unit's boxes.
 
@@ -220,7 +220,7 @@ you pushed; if a column set `expose_io:true`, the `grow.$UNIT.scheduler.<key>` e
 
 ### 5. (Optional) Set the Control Box HMI blob
 
-The Control Box (ADR-0059) is a per-unit opaque JSON blob the firmware **stores but never
+The Control Box is a per-unit opaque JSON blob the firmware **stores but never
 decodes**; the web UI renders it as a soft HMI (sliders/buttons/steppers) that writes via `io set`
 (not a controller kind). Set or clear it:
 
@@ -303,5 +303,4 @@ order. `--as` clones the design under a new unit id.
 - First step: `strawberry-reach-and-auth` (you need an authed session before any command here).
 - One-shot path: `strawberry-import-export`.
 - Health pass after building: `strawberry-diagnose`.
-- Firmware contract: `strawberry-fw/components/proto/messages.proto`; ADR-0006 (unit identity),
-  ADR-0035 (real-day scheduler), ADR-0059 (Control Box), ADR-0066 (the shared lib the CLI rides).
+- Firmware contract: the canonical `proto/messages.proto` shipped in `@avatarsd-llc/strawberry-client` — covers unit identity, the real-day scheduler, and the Control Box blob.

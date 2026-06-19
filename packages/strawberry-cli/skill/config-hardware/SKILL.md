@@ -4,7 +4,7 @@ description: >
   Set persisted hardware/runtime config and boot-time subsystem enables on a Gorshok-v4 board:
   ws2812 count, hx711 scale/offset, flow ppl, timezone/ntp, stats period, display layout/rotation,
   and toggle 1-wire/modbus/zigbee/can (pending-reboot, NVS-persisted). Configure DS2450/DS2423
-  1-Wire IO boards (ADR-0052) where present. Use when asked to calibrate hardware, set ws2812/
+  1-Wire IO boards where present. Use when asked to calibrate hardware, set ws2812/
   hx711/flow/display config, change timezone/ntp, enable/disable a subsystem, or configure 1-Wire
   IO boards.
 ---
@@ -27,11 +27,11 @@ board is reachable and authenticated, and (usually) on the LAN.
 
 - **A reachable, authenticated session.** Run `reach-and-auth` first. You need the board's current
   `--host <ip>` and a token file. Because DHCP leases drift, **locate the board by MAC**
-  (`e4:b3:23:90:ab:48` is the known dev board) — a stale IP looks like a crash but is just a moved
+  (`aa:bb:cc:dd:ee:ff` is the known dev board) — a stale IP looks like a crash but is just a moved
   lease:
 
   ```bash
-  strawberry discover --cidr 10.5.60.0/24 --mac e4:b3:23:90:ab:48 --json
+  strawberry discover --cidr 192.0.2.0/24 --mac aa:bb:cc:dd:ee:ff --json
   # -> pick the matching ip; use it as --host below
   ```
 
@@ -90,7 +90,7 @@ Field meanings + safe ranges (from `ConfigSet`):
 
 - `--ws2812-count N` — pixels in the grow-light chain, **1..64**.
 - `--ws2812-groups "name:offset:count;..."` — partition the chain into named `ws2812.<name>`
-  strip endpoints (ADR-0057 C). Empty = one whole-chain group. **Applies on next boot.**
+  strip endpoints. Empty = one whole-chain group. **Applies on next boot.**
 - `--hx711-scale` / `--hx711-offset` — load-cell calibration (float). Derive empirically:
   offset = raw reading at zero load; scale = counts-per-gram.
 - `--flow1-ppl` / `--flow2-ppl` — flow-meter pulses **per litre** (float). `0` = uncalibrated
@@ -106,7 +106,7 @@ Field meanings + safe ranges (from `ConfigSet`):
   secret (run `reach-and-auth` again) — your current token survives until its TTL but a fresh login
   needs the new password.
 
-This verb also folds `SdInfoReq` (`--sd-info` -> `SdInfo`) and `MpcAuxSet` per ADR-0066 D9; consult
+This verb also folds `SdInfoReq` (`--sd-info` -> `SdInfo`) and `MpcAuxSet`; consult
 `strawberry help --json` for the live flag list — never hard-code it.
 
 ### Verify
@@ -150,7 +150,7 @@ strawberry reboot --host "$HOST" --token-file "$TOK"
 After the reboot, the DHCP IP may move — **re-resolve by MAC** and resume the session:
 
 ```bash
-strawberry discover --cidr 10.5.60.0/24 --mac e4:b3:23:90:ab:48 --json   # find new ip
+strawberry discover --cidr 192.0.2.0/24 --mac aa:bb:cc:dd:ee:ff --json   # find new ip
 strawberry auth resume --host "$NEW_HOST" --token-file "$TOK" --json      # replay token
 ```
 
@@ -164,7 +164,7 @@ strawberry diag heap --host "$NEW_HOST" --token-file "$TOK" --seconds 20     # m
 
 A probe too soon after reboot gives a false disconnect/low-heap read — do not claim done on it.
 
-## Step 3 — 1-Wire IO boards (ADR-0052), where present
+## Step 3 — 1-Wire IO boards, where present
 
 Only relevant if the board has DS2450 (analog/PWM/GPIO, family `ds2450`) or DS2423 (pulse/flow,
 family `ds2423`) modules on the 1-Wire bus, and **1-wire is enabled** (Step 2). First enumerate

@@ -11,7 +11,7 @@
  *             host so we prove the command PARSES + fails cleanly, never executes.
  *   LIMIT   — a documented firmware limitation; asserts the expected rejection.
  *
- *   node scripts/hil-matrix.mjs --host 10.5.60.177 --password-file ./board.pass
+ *   node scripts/hil-matrix.mjs --host 192.0.2.177 --password-file ./board.pass
  *   (exit 0 = every row met its expectation)
  */
 import { execFile } from 'node:child_process';
@@ -23,7 +23,7 @@ const run = promisify(execFile);
 const BIN = join(dirname(fileURLToPath(import.meta.url)), '..', 'bin', 'strawberry-cli.mjs');
 const args = process.argv.slice(2);
 const flag = (n, d) => { const i = args.indexOf(`--${n}`); return i >= 0 ? args[i + 1] : d; };
-const HOST = flag('host', '10.5.60.177');
+const HOST = flag('host', '192.0.2.177');
 const PWFILE = flag('password-file', '/tmp/board-bringup/board.pass');
 const DEAD = '10.255.255.255';            // unreachable: proves DRY commands parse + fail clean
 const UID = 'hilmx';                        // throwaway unit id

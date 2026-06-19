@@ -3,7 +3,7 @@
 `strawberry` is a framework-free command-line client for the Strawberry (Gorshok-v4) grow
 controller. It is the third consumer of [`@avatarsd-llc/strawberry-client`](../../strawberry-client/docs/library.md) (the
 shared WS+protobuf core): every command opens a `DeviceClient` session over a Node WebSocket
-transport with a `0600` file-backed token store, runs the SEC-001 HMAC login, and drives the
+transport with a `0600` file-backed token store, runs the HMAC login, and drives the
 command. It supersedes the hand-rolled Python in the firmware's `tools/` (`ota_upload.py`,
 `wg_provision.py`, `verify_grow.py`, the `ws_*_stress.py` family).
 
@@ -26,8 +26,8 @@ command with no subcommand prints that command's usage. An unknown command exits
 
 | Flag | Meaning |
 |------|---------|
-| `--host H` | Board address: bare IP (`10.5.60.177`), `host:port`, or a full `ws(s)://.../ws` URL. The CLI normalizes a bare host to `ws://<host>/ws`. Required for every device command. |
-| `--password P` | Plaintext device password. Only the HMAC ever crosses the wire (SEC-001). |
+| `--host H` | Board address: bare IP (`192.0.2.177`), `host:port`, or a full `ws(s)://.../ws` URL. The CLI normalizes a bare host to `ws://<host>/ws`. Required for every device command. |
+| `--password P` | Plaintext device password. Only the HMAC ever crosses the wire (HMAC). |
 | `--password-file F` | Read the password from a file (trailing newline trimmed). Preferred — keeps the secret out of shell history. |
 | `--token-file F` | Override the default per-host token path (`~/.strawberry/tokens/<host>.token`, mode `0600`). |
 | `--ttl-ms N` | Desired session TTL in ms (`0` = server default, clamped 60 s..7 d). |
@@ -69,8 +69,8 @@ Open an authenticated session and print the board identity: `Capabilities`, `Sys
 `WifiState`. The fast "is this board reachable and who is it" check. `connect` is an alias.
 
 ```bash
-strawberry info --host 10.5.60.177 --password-file ./pw
-strawberry info --host 10.5.60.177 --json
+strawberry info --host 192.0.2.177 --password-file ./pw
+strawberry info --host 192.0.2.177 --json
 ```
 
 Reports `bootOffsetMs` (note: unreliable on current firmware, see protocol).
@@ -94,7 +94,7 @@ strawberry query grow_config --host $HOST
 
 ### `auth <login|resume|revoke>`
 
-SEC-001 session lifecycle.
+HMAC session lifecycle.
 
 - `login` — HMAC challenge-response; persists the token to the file store.
 - `resume` — replay a stored token (single-connection only; see session model).
@@ -120,7 +120,7 @@ device reassociates and its DHCP IP changes, so re-resolve `--host` afterward.
 
 ```bash
 strawberry net wifi --host $HOST --ssid Skybox --wifi-pass 'secret'
-strawberry net ha   --host $HOST --enabled --mqtt-uri mqtt://10.5.60.1:1883 --mqtt-user ha --mqtt-pass pw
+strawberry net ha   --host $HOST --enabled --mqtt-uri mqtt://192.0.2.1:1883 --mqtt-user ha --mqtt-pass pw
 strawberry net info --host $HOST --json
 ```
 
@@ -130,7 +130,7 @@ Convenience aliases so the setup flow reads top-to-bottom.
 
 - `wifi` -> same as `net wifi`.
 - `wireguard` (alias `wg`) -> same as `wg apply`.
-- `identity` (alias `claim`) -> a documented **stub** that refuses: the ADR-0060 factory-identity
+- `identity` (alias `claim`) -> a documented **stub** that refuses: the factory-identity
   QR claim is design-only, with no firmware claim surface yet (`mfg_data` is read-only). Exits `2`.
 
 ### `wg <apply|disable|status>`

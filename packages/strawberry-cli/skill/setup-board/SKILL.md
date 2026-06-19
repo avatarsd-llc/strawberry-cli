@@ -15,7 +15,7 @@ description: >
 
 This is the **orchestrator**. It does not implement board operations itself; it sequences the
 per-step skills, each of which drives `strawberry-cli`. The CLI is a thin front end over the
-shared `@avatarsd-llc/strawberry-client` library (the one WS+protobuf core, ADR-0066).
+shared `@avatarsd-llc/strawberry-client` library (the one WS+protobuf core).
 
 ## Contract
 
@@ -24,10 +24,10 @@ shared `@avatarsd-llc/strawberry-client` library (the one WS+protobuf core, ADR-
 - **Output:** an authenticated, network-joined, flashed board with at least one verified
   cultivation unit, and a diagnose pass on record.
 - **Non-negotiables:**
-  - Locate the board **by MAC** (e.g. `e4:b3:23:90:ab:48`) — DHCP leases drift; a stale IP looks
+  - Locate the board **by MAC** (e.g. `aa:bb:cc:dd:ee:ff`) — DHCP leases drift; a stale IP looks
     like a crash but isn't.
   - The firmware ships **no mDNS** — discovery is WS-probing candidate IPs.
-  - **SEC-001** login only — the plaintext password never crosses the wire.
+  - **HMAC** login only — the plaintext password never crosses the wire.
   - **Stop for human sign-off** before any destructive step (factory-reset, grow-erase, OTA).
   - After any reboot, validate **dwell+3x** (reboot landed, `system_mode=NORMAL`, pushes resumed),
     never a probe-too-soon read.
@@ -53,8 +53,8 @@ to get wrong. They wrap `strawberry`; they add no protocol logic of their own.
   step 0, and **re-run it after any step that can move the DHCP lease** (Wi-Fi join in step 3, the
   reboot in step 5, the OTA reboot in step 6). A stale `$HOST` is the most common false "crash".
   ```bash
-  HOST="$(skills/setup-board/scripts/resolve-host.sh --cidr 10.5.60.0/24 --mac e4:b3:23:90:ab:48)"
-  # or trust a known IP: HOST="$(skills/setup-board/scripts/resolve-host.sh --host 10.5.60.121)"
+  HOST="$(skills/setup-board/scripts/resolve-host.sh --cidr 192.0.2.0/24 --mac aa:bb:cc:dd:ee:ff)"
+  # or trust a known IP: HOST="$(skills/setup-board/scripts/resolve-host.sh --host 192.0.2.121)"
   ```
 - `scripts/dwell-3x.sh` — the reboot-recovery gate. Dwells, then requires the board to answer
   `query stats` with a healthy `min_free` **three times in a row** before any destructive step
@@ -67,8 +67,8 @@ to get wrong. They wrap `strawberry`; they add no protocol logic of their own.
 
 ```bash
 # Operator-supplied facts for this run:
-CIDR=10.5.60.0/24
-MAC=e4:b3:23:90:ab:48
+CIDR=192.0.2.0/24
+MAC=aa:bb:cc:dd:ee:ff
 PWFILE=~/.strawberry/board.pw          # printed-label password, mode 0600
 TOKEN=~/.strawberry/board.token        # FileTokenStore, written 0600 by the CLI
 S=Skybox  ;  P='wifi-secret'           # operator Wi-Fi
@@ -100,7 +100,7 @@ HOST="$(skills/setup-board/scripts/resolve-host.sh --cidr <lan-cidr> --mac <boar
 WS-probes candidate IPs (no mDNS), opens each, reads `WHAT_CAPABILITIES` + `WifiState`, and
 reports `ip/mac/board_rev`. Confirm the row whose MAC matches the target; that `ws://<ip>/ws` is
 `$HOST` for everything below (the helper prints exactly that). If the board is fresh and only in
-SoftAP, join its AP first (the ADR-0060 QR claim handshake is **design-only**, not yet on
+SoftAP, join its AP first (the QR claim handshake is **design-only**, not yet on
 firmware) and resolve with `--host <softap-ip>`.
 
 **Gate:** exactly one candidate confirmed by MAC; `$HOST` set.
@@ -111,7 +111,7 @@ firmware) and resolve with `--host <softap-ip>`.
 strawberry auth login --host $HOST --password-file <f> --token-file <t> --json
 ```
 
-SEC-001 HMAC challenge-response (`AuthChallengeReq` -> `AuthChallenge{nonce}` ->
+HMAC challenge-response (`AuthChallengeReq` -> `AuthChallenge{nonce}` ->
 `HMAC-SHA256(password, nonce)` -> `AuthLogin{hmac}` -> `AuthOk{token}`). Persist the token to a
 **0600** `--token-file`, so the reboots that OTA and flag changes cause can be ridden out with
 `strawberry auth resume`.
@@ -260,5 +260,4 @@ The orchestrator is resumable; do not restart from zero on a transient failure.
   `scripts/dwell-3x.sh` (reboot-recovery gate). Both wrap `strawberry`; zero extra deps.
 - Per-step skills: `reach-and-auth`, `provision-network`, `flash-ota`, `config-hardware`,
   `build-grow-unit`, `import-export`, `diagnose` (sibling dirs under `skills/`).
-- Library: `@avatarsd-llc/strawberry-client` — the shared WS+protobuf core the CLI is built on
-  (ADR-0066 in `strawberry-fw/doc/adr/`).
+- Library: `@avatarsd-llc/strawberry-client` — the shared WS+protobuf core the CLI is built on.
