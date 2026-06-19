@@ -1,0 +1,93 @@
+{
+  "name": "@avatarsd-llc/device-client",
+  "version": "0.1.0",
+  "description": "Open-source, framework-free TypeScript client for the Strawberry (Gorshok-v4) grow controller WS+protobuf interface. One library for the web UI SPA, the Pulumi deploy provider, the strawberry-cli, and a Claude Code agent-skill.",
+  "license": "Apache-2.0",
+  "author": "Avatars LLC",
+  "homepage": "https://github.com/avatarsd-llc/strawberry-cli#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/avatarsd-llc/strawberry-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/avatarsd-llc/strawberry-cli/issues"
+  },
+  "keywords": [
+    "gorshok",
+    "strawberry",
+    "websocket",
+    "protobuf",
+    "grow-controller",
+    "cli",
+    "claude-skill",
+    "device-client",
+    "esp32"
+  ],
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "strawberry": "./bin/strawberry-cli.mjs",
+    "strawberry-cli": "./bin/strawberry-cli.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./design": {
+      "types": "./dist/design/index.d.ts",
+      "import": "./dist/design/index.mjs",
+      "require": "./dist/design/index.cjs"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.mjs",
+      "require": "./dist/node.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "bin",
+    "skill",
+    "proto",
+    "docs",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint:purity": "node scripts/check-purity.mjs",
+    "sil": "npm run build && node sil/run-sil.mjs",
+    "sil:mock": "node sil/mock-board.mjs",
+    "sil:docker": "docker build -f sil/Dockerfile -t strawberry-sil . && docker run --rm -d --name strawberry-sil -p 8080:8080 strawberry-sil && (sleep 2; MOCK_BOARD_PORT=8080 node sil/run-sil.mjs --external; rc=$?; docker rm -f strawberry-sil >/dev/null 2>&1; exit $rc)",
+    "proto": "node scripts/gen-proto.mjs"
+  },
+  "dependencies": {
+    "@protobuf-ts/runtime": "^2.9.4"
+  },
+  "peerDependencies": {
+    "ws": "^8"
+  },
+  "peerDependenciesMeta": {
+    "ws": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@protobuf-ts/plugin": "^2.11.1",
+    "@types/node": "^20.14.0",
+    "@vitest/coverage-v8": "^2.1.9",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

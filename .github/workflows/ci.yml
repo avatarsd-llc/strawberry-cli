@@ -1,0 +1,59 @@
+# CI for @avatarsd-llc/strawberry-cli.
+#
+# Gates every push and PR: regenerate the protobuf codec (gitignored, ADR-0066 D2),
+# typecheck, run the WS protocol vitest matrix, bundle, and enforce the purity gate.
+# The SIL acceptance run is informational only (continue-on-error): it exercises the
+# real CLI binary against the mock board and still surfaces the documented OPEN
+# protocol findings (push-only `query snapshot`, inactive-unit io-add) as failing
+# rows, so it must not block the merge.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ws is an optional peer dependency (Node transport + SIL mock board);
+      # npm ci skips it, so install it explicitly for the SIL step below.
+      - name: Install ws (optional peer)
+        run: npm i --no-save ws
+
+      # src/proto/messages.ts is gitignored and consumed by tsc/tsup/vitest,
+      # so it must exist before any of them run.
+      - name: Generate protobuf codec
+        run: npm run proto
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Test (WS protocol matrix)
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Purity gate
+        run: npm run lint:purity
+
+      # Informational: drives the built CLI against the mock board. Expected to
+      # report the OPEN protocol findings as failing rows; never blocks CI.
+      - name: SIL acceptance (informational)
+        run: npm run sil
+        continue-on-error: true

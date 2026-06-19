@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "boxes": [
+    {
+      "title": "Heater",
+      "widgets": [
+        { "type": "slider", "label": "Setpoint", "io_id": "grow.1.air_temp", "min": 15, "max": 30, "step": 0.5, "unit": "C" },
+        { "type": "button", "label": "Boost",    "io_id": "grow.1.heater",   "value": 1.0 }
+      ]
+    }
+  ]
+}

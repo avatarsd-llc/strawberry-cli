@@ -1,0 +1,6 @@
+node_modules/
+dist/
+*.tsbuildinfo
+# The generated protobuf-ts codec is regenerated before bundling and never committed
+# (ADR-0066 D2; build seam in build.sh). Keep it out of the tree.
+src/proto/messages.ts

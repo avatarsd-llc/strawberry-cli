@@ -1,0 +1,1725 @@
+syntax = "proto3";
+
+package strawberry;
+
+/* ===========================================================================
+   Wire envelope
+   ===========================================================================
+   Both directions use a oneof + request_id pattern. request_id == 0 means
+   "unsolicited push from server" (snapshot, log, scan/ota progress);
+   non-zero means request/response and the server echoes the same id back. */
+
+message ClientMessage {
+    uint32 request_id = 1;
+    oneof payload {
+        AuthLogin       login          = 10;
+        Subscribe       subscribe      = 11;
+        /* 12..14 reserved (legacy ctrl_output / ctrl_motor / ctrl_ws2812 — replaced by IoSet) */
+        ConfigSet       cfg_set        = 15;
+        OwScanStart     ow_scan_start  = 16;
+        OwSensorMod     ow_sensor_mod  = 17;
+        MbScanStart     mb_scan_start  = 18;
+        MbProbeMod      mb_probe_mod   = 19;
+        MbSetAddress    mb_set_addr    = 20;
+        OtaStart        ota_start      = 21;
+        WifiSet         wifi_set       = 22;
+        HaSet           ha_set         = 23;
+        /* tag 24 reserved (was RefillTrigger; refill is now a regular
+           controller in the registry — clients send ControllerSetTarget
+           on the relevant fill_water instance instead). */
+        Reboot          reboot         = 25;
+        Query           query          = 26;
+        AuthResume      auth_resume    = 27;
+        AuthRevoke      auth_revoke    = 28;
+        IoSet           io_set         = 29;
+        DeviceListReq   device_list_req = 30;
+        DeviceAdd       device_add     = 31;
+        DeviceRemove    device_remove  = 32;
+        DeviceSetCfg    device_set_cfg = 33;
+        DeviceScan      device_scan    = 34;
+        DeviceScanStop  device_scan_stop = 35;
+        MpcAuxSet       mpc_aux_set    = 36;
+        IoPersistSet    io_persist_set = 37;
+        OtaUploadBegin  ota_upload_begin = 38;
+        /* tag 39 reserved (was OtaUploadChunk; chunks now use a separate
+           raw-binary framing — see ws_dispatch_uri's first-byte
+           discriminator).  Keeping the tag burned so a stale client
+           that still sends an OtaUploadChunk variant gets a clean
+           "unknown payload" error rather than silent acceptance. */
+        OtaUploadEnd    ota_upload_end   = 40;
+        OtaUploadAbort  ota_upload_abort = 41;
+        GrowUnitSet      grow_unit_set      = 42;
+        GrowUnitRemove   grow_unit_remove   = 43;
+        GrowProfileSet   grow_profile_set   = 44;
+        GrowProfileRemove grow_profile_remove = 45;
+        GrowStageAdvance grow_stage_advance = 46;
+        /* tag 47 reserved (was GrowWaterSet; the standalone water_station
+           feature was retired — fill / safety_flow / safety_weight live in
+           the controller_registry like any other controller now). */
+        FactoryReset    factory_reset      = 48;
+        ZigbeeFactoryReset zb_factory_reset = 49;
+        /* tag 50 reserved (was ZbSpectrumScanReq one-shot).  Spectrum is
+           now a free-running stream gated by TOPIC_ZB_SPECTRUM in the
+           regular Subscribe message — no per-scan request needed. */
+        ZbSetPollInterval     zb_set_poll_interval     = 51;
+        ZbPermitJoinKeepOpen  zb_permit_join_keep_open = 52;
+        ZbSetPollingEnabled   zb_set_polling_enabled   = 53;
+        ZbDpSelectSet         zb_dp_select_set         = 54;
+        ZbDpCatalogReq        zb_dp_catalog_req        = 55;
+        ControllerListReq     ctrl_list_req            = 56;
+        ControllerSetEnabled  ctrl_set_enabled         = 57;
+        ControllerSetTarget   ctrl_set_target          = 58;
+         ControllerDestroy     ctrl_destroy             = 59;
+         ControllerBind        ctrl_bind                = 64;
+         ControllerCreate      ctrl_create              = 60;
+        /* tag 61 reserved (was ControllerKindsReq ctrl_kinds_req).  Kind
+           metadata — slots, params, diagram topology — is bundled into
+           the SPA via controller-kinds.ts; no runtime fetch needed.
+           Burned so a stale client gets a clean unknown-payload error. */
+        /* tag 62 retired (was PresetListReq ctrl_presets_req) — grow units are
+           composed from capability modules now, no preset catalogue to fetch. */
+        SystemFlagsSet        system_flags_set         = 63;
+        ControllerSetParams   ctrl_set_params          = 65;
+        GrowUserIoAdd         grow_user_io_add         = 66;
+        GrowUserIoRemove      grow_user_io_remove      = 67;
+        GrowUserIoListReq     grow_user_io_list_req    = 68;
+        GrowScheduleSet       grow_schedule_set        = 69;
+        IoMqttSet             io_mqtt_set              = 70;
+        GrowEraseSettings     grow_erase_settings      = 72;
+        ControllerAcknowledge ctrl_acknowledge         = 73;
+        WgSet                 wg_set                   = 74;
+        CtrlGraphApply        ctrl_graph_apply         = 75;
+        IoCanSet              io_can_set               = 76;
+        CanRxBind             can_rx_bind              = 77;
+        CanRxUnbind           can_rx_unbind            = 78;
+        SdInfoReq             sd_info_req              = 79;
+        AuthChallengeReq      auth_challenge_req       = 80;
+        OwConfigSet           ow_config_set            = 81;
+        ControlBoxGet         control_box_get          = 82;
+        ControlBoxSet         control_box_set          = 83;
+    }
+    reserved 61;
+    reserved 71;   /* was GrowWaterReset — water is an ordinary unit now (B5) */
+}
+
+message ServerMessage {
+    uint32 request_id = 1;
+    oneof payload {
+        SensorSnapshot   snapshot      = 10;
+        Stats            stats         = 11;
+        /* tag 12 reserved (was LogEntry log; per-line streaming was
+           replaced by LogBatch on tag 26 — bare LogEntry is now a
+           server-side history primitive only).  Keeping it burned so
+           a stale client that still sends a `log` variant gets a
+           clean "unknown payload" error rather than silent drop. */
+        OwScanState      ow_scan       = 13;
+        OwSensors        ow_sensors    = 14;
+        MbScanState      mb_scan       = 15;
+        SoilProbes       soil_probes   = 16;
+        OtaProgress      ota           = 17;
+        WifiState        wifi          = 18;
+        HaConfig         ha_config     = 19;
+        Ack              ack           = 20;
+        ErrorMsg         error         = 21;
+        IoValue          io_value      = 22;
+        AuthOk           auth_ok       = 23;
+        IoStruct         io_struct     = 24;
+        DeviceList       device_list   = 25;
+        LogBatch         log_batch     = 26;
+        DeviceConfig     device_config = 27;
+        TimeStatus       time_status   = 28;
+        OtaChunkAck      ota_chunk_ack = 29;
+        GrowConfig       grow_config   = 30;
+        /* tag 31 reserved (was GrowDiag grow_diag; per-unit ~1 Hz
+           push was never wired to a producer and the UI never
+           subscribed.  Keeping it burned so the slot can't be
+           silently re-used for a different shape). */
+        ZbSpectrumFrame  zb_spectrum   = 32;
+        ZbDpCatalog      zb_dp_catalog = 33;
+        ControllerList   ctrl_list     = 34;
+        /* tags 35, 36 retired (was ControllerKinds ctrl_kinds / PresetList
+           ctrl_presets — preset+kind discovery, both ripped; the SPA bundles
+           the metadata statically). */
+        ControllerEvent  ctrl_event    = 37;
+        SystemFlags      system_flags  = 38;
+        GrowUserIoList   grow_user_io_list = 39;
+        WgConfig         wg_config     = 40;
+        WgStatus         wg_status     = 41;
+        CtrlGraphChanged ctrl_graph_changed = 42;
+        CanObserve       can_observe   = 43;
+        SdInfo           sd_info       = 44;
+        CtrlOutValsPush  ctrl_out_vals = 45;
+        Capabilities     capabilities  = 46;
+        AuthChallenge    auth_challenge = 47;
+        IoValues         io_values     = 48;
+        OwConfig         ow_config     = 49;
+        StatsFast        stats_fast    = 50;
+        ControlBoxBlob   control_box_blob = 51;
+    }
+    reserved 12, 31, 35;
+}
+
+/* ===========================================================================
+   Subscriptions — bitmask of topics the session wants pushed.
+   =========================================================================== */
+
+message Subscribe {
+    uint32 topics = 1;          /* bitfield of TOPIC_* */
+}
+enum Topic {
+    TOPIC_NONE             = 0;
+    TOPIC_SNAPSHOT         = 0x01;
+    TOPIC_LOG              = 0x02;
+    TOPIC_STATS            = 0x04;
+    TOPIC_OW_SCAN          = 0x08;
+    TOPIC_MB_SCAN          = 0x10;
+    TOPIC_OTA              = 0x20;
+    TOPIC_IO               = 0x40;   /* per-entry io_layer value deltas (IoValue) */
+    TOPIC_IO_STRUCT        = 0x80;   /* register / unregister events (IoStruct).
+                                        On subscribe, server replays REGISTERED
+                                        for every existing entry, then pushes
+                                        live events. */
+    TOPIC_TIME             = 0x100;  /* device wall-clock stream (TimeStatus).
+                                        Pushed ~1 Hz from the stats task while at
+                                        least one session subscribes, so the UI
+                                        clock reflects device time instead of
+                                        free-running locally.  (Reuses the bit
+                                        formerly reserved for TOPIC_GROW_DIAG.) */
+    TOPIC_ZB_SPECTRUM      = 0x200;  /* free-running 802.15.4 spectrum frames.
+                                        Driver ED loop only runs while at least
+                                        one session has this bit set; keeps the
+                                        radio quiet for joined-peer traffic when
+                                        nobody's watching. */
+    TOPIC_CONTROLLERS      = 0x400;  /* controller_registry membership changes —
+                                        server pushes ControllerEvent(ADDED |
+                                        REMOVED) on create/destroy.  Status /
+                                        flag deltas are not pushed yet; UI
+                                        polls ListControllers as needed. */
+    TOPIC_CAN_OBSERVE      = 0x800;  /* live CAN domain-bus observe stream
+                                        (CanObserve).  Gated like TOPIC_ZB_SPECTRUM:
+                                        the bridge runs a promiscuous can_bus
+                                        subscription only while a session watches,
+                                        and tears it down on the last leave. */
+}
+
+/* ===========================================================================
+   Auth
+   =========================================================================== */
+
+/* Challenge-response auth (SEC-001).  The plaintext password must never
+   cross the wire, so login is a two-step handshake:
+     1. client → AuthChallengeReq
+        server → AuthChallenge{nonce}      (single-use, short TTL, per-session)
+     2. client → AuthLogin{hmac = HMAC-SHA256(password, nonce)}
+        server recomputes the HMAC from the NVS password + stored nonce and
+        constant-time compares.
+   Field 1 (`password`) is RETAINED-but-DEPRECATED: it is never read for auth
+   anymore (the firmware rejects logins that lack `hmac`).  Its tag number is
+   NOT reused — a stale SPA that still sends plaintext gets a clean auth error
+   instead of silent acceptance. */
+message AuthChallengeReq { }
+message AuthChallenge    {
+    bytes  nonce = 1;   /* 16 random bytes, single-use, ~30 s TTL, per-session. */
+}
+message AuthLogin   {
+    string password       = 1 [deprecated = true];  /* SEC-001: never read; use hmac. */
+    uint32 desired_ttl_ms = 2;   /* 0 → server default (24h). Caps at 7d. */
+    bytes  hmac           = 3;   /* HMAC-SHA256(password, AuthChallenge.nonce). */
+}
+message AuthResume  { string token = 1; }
+message AuthOk      {
+    string token            = 1;
+    uint32 ttl_ms           = 2;
+    uint64 server_now_ms    = 3;    /* esp_timer_get_time()/1000 at reply.
+                                       Client uses (Date.now() - server_now_ms)
+                                       as the boot-offset for converting
+                                       monotonic IoValue.ts_ms to UI age. */
+}
+message AuthRevoke  { string token = 1; }
+message Ack         { bool ok = 1; string detail = 2; }
+message ErrorMsg    { uint32 code = 1; string detail = 2; }
+
+/* Standard error codes used in ErrorMsg.code (server → client). */
+enum ErrCode {
+    ERR_NONE          = 0;
+    ERR_INTERNAL      = 1;
+    ERR_AUTH_REQUIRED = 401;
+    ERR_AUTH_EXPIRED  = 419;
+    ERR_NOT_FOUND     = 404;
+    ERR_BAD_REQUEST   = 400;
+    ERR_BUSY          = 409;
+    /* The client's compiled-in params layout no longer matches the firmware's
+       param contract (ADR-0022) - a stale cached SPA after an OTA. The UI
+       treats this as "reload the app", not as a user-input error. */
+    ERR_STALE_CLIENT  = 426;
+    ERR_UNSUPPORTED   = 501;
+}
+
+/* ===========================================================================
+   Sensor snapshot — mirrors sensor_snapshot_t in sensor_store.h
+   =========================================================================== */
+
+message OneWireDevice {
+    bytes  rom        = 1;      /* 8 bytes */
+    string family     = 2;      /* e.g. "DS18B20"   */
+    string desc       = 3;      /* e.g. "12-bit Thermometer" */
+    string category   = 4;      /* "temperature" | "ibutton" | ... */
+    bool   responding = 5;
+    int64  age_ms     = 6;
+    float  temp_c     = 7;      /* meaningful only when category=="temperature" */
+    uint32 resolution = 8;      /* 0=9b 1=10b 2=11b 3=12b (DS18x only) */
+}
+
+message SoilProbe {
+    uint32 addr        = 1;
+    string type        = 2;     /* "npk_7in1" | "th_basic" | "raw" | ... */
+    uint32 valid_mask  = 3;     /* SOIL_FLD_* bitmask */
+    bool   responding  = 4;
+    int64  age_ms      = 5;
+    float  hum         = 6;
+    float  temp        = 7;
+    float  ec          = 8;
+    float  ph          = 9;
+    float  n           = 10;
+    float  p           = 11;
+    float  k           = 12;
+    float  sal         = 13;
+    float  tds         = 14;
+}
+
+message SensorSnapshot {
+    /* BME680 */
+    bool   bme680_valid     = 1;
+    float  air_temp         = 2;
+    float  air_humidity     = 3;
+    float  pressure         = 4;
+    float  gas_resistance   = 5;
+    bool   iaq_valid        = 6;
+    float  iaq              = 7;
+
+    /* BH1750 */
+    bool   bh1750_valid     = 8;
+    float  lux              = 9;
+
+    /* 1-Wire devices (temperature + presence) */
+    repeated OneWireDevice ds18b20 = 10;
+
+    /* Modbus soil probes */
+    repeated SoilProbe soil = 11;
+
+    /* HX711 (4 channels) */
+    repeated float weight_kg     = 12;
+    repeated bool  hx711_valid   = 13;
+
+    /* Power monitor */
+    float  vin_v       = 14;
+    float  iin_a       = 15;
+    float  input_w     = 16;
+    float  hbridge_a   = 17;
+    float  motor_w     = 18;
+
+    /* Flow / GPIO */
+    float  flow1_pps    = 19;
+    float  flow2_pps    = 20;
+    bool   has_flow2    = 21;
+    int32  moisture_mv  = 22;
+    bool   has_moisture = 23;
+    bool   water_top    = 24;
+    bool   vsens_pg     = 25;
+
+    /* 26..34 reserved — output state now flows over the IO stream
+       (out.0..out.5, ws28xx[i].color). */
+
+    int64  uptime_ms    = 35;
+    string device_id    = 36;
+    string fw_version   = 37;
+    string datetime     = 38;       /* ISO-8601 if NTP synced; empty otherwise */
+
+    reserved 39;                     /* was bool motor_saver_enabled */
+    reserved 40;                     /* was bool refill_active */
+
+    string wifi_mode    = 41;       /* "sta" | "ap" | "none" */
+    string wifi_ssid    = 42;
+    string wifi_ip      = 43;       /* empty if not connected */
+
+    /* MCP23008 sensor sub-rails P0..P5 — current state.  Read directly via
+       mcp23008_drv_get_pin so the Devices→Advanced panel always reflects
+       hardware truth (these pins do not flow through io_layer). */
+    repeated bool mcp_aux = 44;
+
+    /* Detected board revision (ADR-0023): "A1" | "A2" | "unknown".  Frozen at
+       boot by the board_rev probe (NVS override wins); identity-class fact
+       like fw_version. */
+    string board_rev = 45;
+}
+
+/* ===========================================================================
+   Stats
+   =========================================================================== */
+
+message TaskInfo {
+    string name           = 1;
+    uint32 stack_high_wm  = 2;
+    float  cpu_percent    = 3;   /* 0.0 .. 100.0, single decimal precision */
+    uint32 priority       = 4;
+    /* Bytes passed to xTaskCreate (or the IDF Kconfig value for system
+       tasks).  0 means "unknown" — UI falls back to the legacy
+       hwm-vs-historical-peak heuristic.  Populated from the firmware's
+       task-size registry, which xTaskCreate call sites feed via
+       system_stats_register_task() and which is pre-seeded with the
+       common ESP-IDF system task names (IDLE, wifi, tiT, …) at boot. */
+    uint32 stack_size     = 5;
+    /* Runtime share of the last Stats window in permille (0..1000),
+       same delta math as cpu_percent but integer-exact so machine
+       consumers (HIL attribution tooling) need not parse a rounded
+       float.  Sum over all tasks ≈ 1000 modulo truncation. */
+    uint32 cpu_permille   = 6;
+}
+message Stats {
+    uint32 free_heap         = 1;
+    uint32 min_free_heap     = 2;
+    uint32 largest_free_block = 3;
+    float  cpu_percent_total = 4;   /* 0.0 .. 100.0 */
+    int32  rssi              = 5;
+    repeated TaskInfo tasks  = 6;
+    int64  uptime_ms         = 7;   /* monotonic since boot, ms */
+}
+
+/* ADR-0054 — compact per-task stats for the fast (lease-rate, e.g. 100 ms) push.
+   The full `Stats` above carries the static per-task metadata (name/priority/
+   stack_size) at ~1 Hz / on task-set change / on subscribe; this carries only the
+   values that move, packed.  `task[i]` is index-aligned to the last full `Stats.
+   tasks[i]` (the encoder only emits a fast frame while the task set is unchanged,
+   so positional alignment holds — no per-entry id needed).  Each fixed32 packs
+   `(cpu_permille << 16) | stack_high_wm_words` — the only live per-task data, 4 B
+   each vs the ~40-73 B/task of a full TaskInfo. */
+message StatsFast {
+    uint32 free_heap          = 1;
+    uint32 min_free_heap      = 2;
+    uint32 largest_free_block = 3;
+    float  cpu_percent_total  = 4;
+    int32  rssi               = 5;
+    int64  uptime_ms          = 6;
+    repeated fixed32 task     = 7;   /* (cpu_permille<<16)|stack_hwm_words, index = Stats.tasks index */
+}
+
+/* ===========================================================================
+   Logs
+   =========================================================================== */
+
+enum LogLevel {
+    LL_NONE  = 0;
+    LL_ERROR = 1;
+    LL_WARN  = 2;
+    LL_INFO  = 3;
+    LL_DEBUG = 4;
+    LL_VERB  = 5;
+}
+message LogEntry {
+    LogLevel level    = 1;
+    string   tag      = 2;
+    string   message  = 3;
+    int64    timestamp_ms = 4;
+}
+
+/* Coalesces multiple LogEntry frames into one WS push so a noisy driver
+   (e.g. an i2c-nack storm) doesn't saturate the socket with hundreds of
+   tiny frames per second.  Producer flushes every ~200 ms or sooner if
+   the buffer fills.  Subscribers fan it back out to one-entry-at-a-time
+   consumers. */
+message LogBatch {
+    repeated LogEntry entries = 1;
+}
+
+/* ===========================================================================
+   1-Wire scan & registry
+   =========================================================================== */
+
+message OwScanStart { }
+message OwScanState {
+    bool running      = 1;
+    repeated OneWireDevice found = 2;
+}
+message OwSensorMod {
+    enum Op { ADD = 0; REMOVE = 1; SET_RESOLUTION = 2; }
+    Op     op         = 1;
+    bytes  rom        = 2;      /* 8 bytes */
+    uint32 resolution = 3;      /* SET_RESOLUTION only — 0=9b, 1=10b, 2=11b, 3=12b */
+}
+message OwSensors {
+    repeated OneWireDevice sensors = 1;
+}
+
+/* ===========================================================================
+   Modbus scan & probes
+   =========================================================================== */
+
+message MbScanStart { }
+message MbScanFound {
+    uint32 addr = 1;
+    string type = 2;            /* detected layout if any */
+}
+message MbScanState {
+    bool   running   = 1;
+    uint32 progress  = 2;       /* 0..247 */
+    repeated MbScanFound found = 3;
+}
+message MbProbeMod {
+    enum Op { ADD = 0; REMOVE = 1; SET_TYPE = 2; }
+    Op     op   = 1;
+    uint32 addr = 2;
+    string type = 3;
+}
+message MbSetAddress {
+    uint32 old_addr = 1;
+    uint32 new_addr = 2;
+    uint32 reg      = 3;        /* 0x07D0 default */
+}
+message SoilProbes {
+    repeated SoilProbe probes = 1;
+}
+
+/* All actuator writes go through IoSet
+   (id="out.N" / id="ws28xx[i].color" / id="mcp.aux.N"). */
+
+message Reboot        { uint32 delay_ms = 1; }
+
+/* Factory reset — wipes the entire NVS partition and reboots, dropping
+   credentials, calibration, paired probes, grow profiles and the persisted
+   auth token.  `confirm` must be the literal magic value 0xFAC70819 so a
+   stale or accidental message can't trigger a wipe. */
+message FactoryReset  { uint32 confirm = 1; }
+
+/* Direct write to a MCP23008 sub-rail (P0..P5).  Used by Devices→Advanced
+   to toggle the recovery primitives.  The pins do not appear in io_layer —
+   io_outputs leaves them untouched and the driver call is the source of
+   truth. */
+message MpcAuxSet {
+    uint32 pin   = 1;       /* 0..5 */
+    bool   value = 2;
+}
+
+/* ===========================================================================
+   Config (persistent settings)
+   =========================================================================== */
+
+message ConfigSet {
+    /* Each field is optional; only the populated ones get persisted. */
+    optional string password   = 1;
+    optional uint32 gpio2_mode = 2;   /* 0=ADC, 1=PCNT */
+    optional float  hx711_scale  = 3;
+    optional float  hx711_offset = 4;
+    optional string timezone   = 5;
+    optional uint32 pwm_mode   = 6;   /* 0=SPLIT (pwm_a/pwm_b), 1=H_BRIDGE */
+    /* field 7 retired (was global ow_resolution — now per-ROM via OwSensorMod.SET_RESOLUTION) */
+    optional uint32 ws2812_count  = 8;/* 1..64 */
+    optional string ntp_server    = 9;/* host[:port], default "pool.ntp.org" */
+    optional uint32 stats_period_ms = 10; /* TOPIC_STATS push period; clamped 100..10000 */
+    optional string theme         = 11; /* UI theme id ("strawberry", "mono", …); empty = default */
+    /* Zigbee coordinator settings.  All applied live on the running
+       stack:
+         * zb_tx_power_dbm: applied immediately.
+         * zb_install_policy: applied via the trust-center install-code
+           policy bit (esp_zb_secur_ic_only_enable).
+         * zb_channel: applied via Mgmt_NWK_Update_req if the network is
+           formed; peers migrate within ~20 s per ZB spec.  Falls back
+           to next-boot apply if the stack is held off (e.g. SoftAP mode
+           keeps the radio idle until STA reassociates). */
+    optional uint32 zb_channel        = 12; /* 11..26, default 25 */
+    reserved 13;                            /* was zb_pan_id — auto-allocated at formation */
+    optional int32  zb_tx_power_dbm   = 14; /* -24..+20 */
+    optional uint32 zb_install_policy = 15; /* 0=open, 1=require install code */
+    /* Controller engine pacing.  ctrl_rate_hz caps the event-driven recompute
+       rate (0 = unlimited, recompute on every sensor sample); ctrl_heartbeat_ms
+       is the floor that still ticks time-driven controllers when sensors are
+       quiet (clamped 50..60000). */
+    optional uint32 ctrl_rate_hz      = 16;
+    optional uint32 ctrl_heartbeat_ms = 17;
+    /* ADR-0017 A6: global stuck-sensor diagnostic bound (ms; 0 = disabled).  Past
+       this age an io_layer input is flagged CTRL_FLAG_STALE_INPUT (diagnostic
+       only — the value stays valid; the hard action lives in safety_limit). */
+    optional uint32 ctrl_stale_ms     = 18;
+    /* Flow-meter calibration (pulses per liter) for the two local pcnt meters.
+       Applied at the main.c publish point so flow.1 / flow.2 read real L/s — the
+       conversion lives in hardware settings, NOT in any unit's control logic.
+       0 = uncalibrated (the raw pulses/s is published unchanged). */
+    optional float  flow1_ppl         = 19;
+    optional float  flow2_ppl         = 20;
+    /* Dashboard grid layout: how many cells the on-device display splits the
+       panel into (0=2x2, 1=3x3, 2=3x4, 3=2x3 — mirrors display_layout_t).
+       Persisted to NVS and read by the display at boot, so the change applies on
+       next boot (no live re-layout of the running screen). */
+    optional uint32 display_layout    = 21;
+    /* Panel rotation index (0=0°, 1=90°, 2=180°, 3=270° — display_rotation_t).
+       Persisted to NVS; applied via the ST7789V MADCTL at boot. */
+    optional uint32 display_rotation  = 22;
+    /* Board-revision detection override (ADR-0023): 0=auto (boot-time I2C
+       probe decides), 1=force A1, 2=force A2.  The escape hatch for probe
+       ambiguity / bench rigs; applies on next boot. */
+    optional uint32 board_rev_override = 23;
+    /* ADR-0028: headroom-governor protected floor (bytes; 0 = restore the
+       32768 default).  Applied live (heap_gov_set_floor) and persisted. */
+    optional uint32 heap_gov_floor    = 24;
+    /* OLED (a1 SSD1306) minimal settings (CAP-003).  Only meaningful when the
+       board runs the OLED stack (capabilities.display_kind == "oled"); on a2
+       they persist but are inert.  Applied live by display_manager:
+         oled_brightness:  SSD1306 contrast 0..255.
+         oled_timeout_s:   blank the STA dashboard after this many idle seconds
+                           (0 = never blank).
+         oled_sta_metrics: bitmask of which STA-dashboard metric rows to show
+                           (bit0 power, bit1 light, bit2 climate, bit3 IAQ,
+                           bit4 soil); 0 shows the full dashboard. */
+    optional uint32 oled_brightness   = 25;
+    optional uint32 oled_timeout_s    = 26;
+    optional uint32 oled_sta_metrics  = 27;
+    /* WS2812 pixel grouping (ADR-0057 Phase C): partition the physical chain into
+       named groups, each exposed as one f32[] strip endpoint "ws2812.<name>".
+       Encoded "name:offset:count;name:offset:count;...". Empty = one whole-chain
+       group. Persisted; applied on next boot (the chain is registered at init). */
+    optional string ws2812_groups     = 28;
+}
+
+/* Read-only mirror of currently persisted device-layer configuration.
+   Returned for Query{ what: WHAT_DEVICE_CONFIG }. */
+message DeviceConfig {
+    uint32 gpio2_mode    = 1;
+    uint32 pwm_mode      = 2;
+    /* field 3 retired (was global ow_resolution) */
+    uint32 ws2812_count  = 4;
+    uint32 stats_period_ms = 5;
+    string theme           = 6;  /* UI theme id from NVS; empty = SPA default */
+    /* Zigbee coordinator status mirror — read-only.  network_formed is
+       false until ZBOSS finishes the first commissioning cycle.
+       radio_active is false while the stack is held off (e.g. SoftAP
+       mode keeps the radio idle); pre-formation spectrum scanning still
+       works once radio_active is true. */
+    uint32 zb_channel             = 7;  /* 11..26 */
+    reserved 8;                         /* was zb_pan_id — auto-allocated at formation */
+    int32  zb_tx_power_dbm        = 9;
+    uint32 zb_install_policy      = 10;
+    bool   zb_network_formed      = 11;
+    uint32 zb_short_addr          = 12;
+    string zb_ieee_addr           = 13; /* 16-char lowercase hex */
+    uint32 zb_permit_join_remaining_s = 14;
+    uint32 zb_peer_count          = 15;
+    /* RF / coex health.  An elevated zb_nlme_errors_per_min usually
+       means Wi-Fi traffic is winning the C6's shared-PHY arbitration;
+       correlate with per-peer missed_intervals_now to identify
+       battery sensors whose heartbeat is being dropped. */
+    uint32 zb_nlme_errors_per_min = 16;
+    uint32 zb_nlme_errors_total   = 17;
+    bool   zb_radio_active        = 18; /* mirrors zigbee_drv_status_t.radio_active */
+    /* Controller engine pacing (mirrors the persisted NVS values). */
+    uint32 ctrl_rate_hz           = 19; /* recompute cap; 0 = unlimited */
+    uint32 ctrl_heartbeat_ms      = 20; /* tick heartbeat floor */
+    uint32 ctrl_stale_ms          = 21; /* A6 stuck-sensor diagnostic bound; 0 = off */
+    /* Flow-meter calibration mirror (pulses per liter); 0 = uncalibrated. */
+    float  flow1_ppl              = 22;
+    float  flow2_ppl              = 23;
+    /* Dashboard grid layout mirror (0=2x2, 1=3x3, 2=3x4, 3=2x3 — display_layout_t). */
+    uint32 display_layout        = 24;
+    /* Panel rotation mirror (0=0°,1=90°,2=180°,3=270° — display_rotation_t). */
+    uint32 display_rotation      = 25;
+    /* Board revision (ADR-0023): the persisted detection override (0=auto,
+       1=A1, 2=A2) and the revision actually frozen at this boot. */
+    uint32 board_rev_override    = 26;
+    string board_rev             = 27;  /* "A1" | "A2" | "unknown" */
+    /* ADR-0028: headroom-governor protected floor mirror (bytes). */
+    uint32 heap_gov_floor        = 28;
+    /* OLED (a1) settings mirror (CAP-003).  Inert on a2 (display_kind != oled)
+       but always reported so the UI's OLED page can populate when present. */
+    uint32 oled_brightness       = 29;  /* SSD1306 contrast 0..255 */
+    uint32 oled_timeout_s        = 30;  /* STA dashboard blank timeout s; 0 = never */
+    uint32 oled_sta_metrics      = 31;  /* STA metric-row bitmask */
+    string ws2812_groups         = 32;  /* "name:off:count;..."; empty = whole chain */
+}
+
+/* Board-capability descriptor (CAP-001).  The single source of truth for which
+   UI-visible FEATURES this firmware+board expose; the UI renders 100% from this
+   set and NEVER from the raw board revision.  A capability is feature PRESENCE,
+   decoupled from the hardware implementation below it — e.g. `modbus` is present
+   on both board generations even though A1 drives RS485 directly and A2 routes it
+   through the HAT controller.
+
+   Determination is mixed: some bits are compile-time (zigbee follows
+   CONFIG_APP_ZIGBEE_SUPPORTED), the rest are resolved at boot from the frozen
+   board_rev verdict (ADR-0023).  Returned for Query{ what: WHAT_CAPABILITIES }.
+   Keep this a flat, extensible presence descriptor — add new bits, do not encode
+   implementation details here. */
+message Capabilities {
+    /* Zigbee 802.15.4 endpoint + every Zigbee UI surface.  Compile-time:
+       false unless CONFIG_APP_ZIGBEE_SUPPORTED (absent on the 4MB prod image). */
+    bool   zigbee            = 1;
+    /* RS485 Modbus soil probes.  Present on BOTH revisions (impl differs). */
+    bool   modbus            = 2;
+    /* Which display stack the board runs, hence which config surface the UI
+       offers: "oled" (A1 simple page), "lvgl" (A2 compositor), or "" (none). */
+    string display_kind      = 3;
+    /* microSD card slot on the shared SPI bus.  A2 only. */
+    bool   sd_card           = 4;
+    /* Flow/boost pulse-counter inputs (incl. the boost-counter/analog selector).
+       A1 only — on A2 those pins are reserved for a future HUD. */
+    bool   flow_sensors      = 5;
+    /* Water-top level sensor on GPIO8/GPIO9.  A1 only. */
+    bool   water_top_sensor  = 6;
+    /* The single user analog pin.  A1 only. */
+    bool   analog_pin        = 7;
+}
+
+/* ===========================================================================
+   OTA
+   =========================================================================== */
+
+message OtaStart   { string url = 1; }
+message OtaProgress {
+    bool   in_progress = 1;
+    uint32 percent     = 2;
+    string detail      = 3;
+}
+
+/* WS file-upload OTA — replaces the legacy POST /ota/upload path so the
+   binary travels on the same socket the SPA already holds open.  The flow
+   is begin → repeated chunk{N}/ack{N+|chunk|} → end.  Ack-per-chunk gives
+   simple flow control: the browser sends chunk N+1 only after seeing the
+   ack for N, which naturally backpressures to whatever esp_ota_write can
+   sustain (~200–400 KB/s on the C6).  Abort or socket-close reverts state. */
+
+message OtaUploadBegin {
+    uint32 size   = 1;          /* total image size in bytes (app_size+spa_size for target=2) */
+    uint32 target = 2;          /* 0 = app slot (default), 1 = the 'spa' partition
+                                   (web UI bundle; written raw, applies on next load,
+                                   no reboot), 2 = COMBINED: one stream carrying both,
+                                   the device routes [spa bytes][app bytes] to the spa
+                                   partition then the inactive app slot and reboots so
+                                   both apply together (single-file OTA) */
+    uint32 spa_size = 3;        /* target=2 only: leading bytes that go to the spa
+                                   partition; the remaining (size - spa_size) are the app */
+    uint32 app_size = 4;        /* target=2 only: trailing app-slot bytes (== size - spa_size,
+                                   sent for validation) */
+}
+/* OtaUploadChunk message removed — chunks bypass protobuf entirely now.
+   On the wire, a chunk frame is:
+     byte 0       : 0x01 (chunk discriminator; 0x00 = ClientMessage)
+     bytes 1..4   : uint32 LE offset
+     bytes 5..N   : raw firmware bytes (up to ~16 KB, sized at runtime)
+   This keeps strawberry_ClientMessage tiny (~260 B) — without it the
+   union was forced to ~16 KB by the chunk's bytes field, and that 16 KB
+   was paid permanently regardless of upload activity. */
+message OtaUploadEnd   { }
+message OtaUploadAbort { }
+
+message OtaChunkAck {
+    uint32 next_offset = 1;     /* server expects the next chunk to start here */
+}
+
+/* ===========================================================================
+   Wi-Fi & Home Assistant MQTT
+   =========================================================================== */
+
+message WifiSet  { string ssid = 1; string password = 2; }
+message WifiState {
+    string ssid       = 1;
+    bool   connected  = 2;
+    string ip         = 3;
+    int32  rssi       = 4;
+}
+message HaSet {
+    bool   enabled       = 1;
+    string mqtt_uri      = 2;
+    string mqtt_user     = 3;
+    string mqtt_password = 4;
+    string topic_prefix  = 5;
+}
+message HaConfig {
+    bool   enabled       = 1;
+    string mqtt_uri      = 2;
+    string mqtt_user     = 3;
+    string topic_prefix  = 4;
+    bool   connected     = 5;
+    string last_error    = 6;
+}
+
+/* ===========================================================================
+   I/O layer push (TOPIC_IO).  Two shapes carry the same payload:
+     - IoValue   (tag 22): one value per frame — kept for back-compat.
+     - IoValues  (tag 48): many values coalesced into ONE frame per sender
+                  drain tick.  Under a fast dashboard subscription the
+                  per-value framing was the dominant induced heap churn
+                  (one WS send + one set of lwIP per-segment allocations per
+                  dirty endpoint); batching collapses the frame rate ~10-50x.
+   A single IoValues frame is byte-for-byte just a sequence of `values`
+   submessages, so a client that already folds IoValue can apply each entry
+   identically.
+   =========================================================================== */
+
+message IoValue {
+    string id        = 1;       /* io_layer entry id, e.g. "bme680.air_temp" */
+    bool   valid     = 2;
+    int32  dtype     = 3;       /* io_dtype_t numeric (0=bool,1=i32,2=u32,3=f32,...) */
+    /* exactly one of these populated per frame (matches dtype) */
+    bool   v_bool    = 4;
+    sint32 v_i32     = 5;
+    uint32 v_u32     = 6;
+    float  v_f32     = 7;
+    int64  ts_ms     = 8;       /* monotonic ms since boot at publish time */
+    string v_str     = 9;       /* dtype==STRING: the value (else empty) — so the
+                                   IO/endpoint list shows the text, not "?" */
+}
+
+/* Batched value deltas (TOPIC_IO).  `values` rides as FT_CALLBACK on the C
+   side (see messages.options) so the inline array never inflates the shared
+   ServerMessage union — the firmware hand-streams entries one at a time from
+   the egress dirty bitmap, flushing the frame when the next entry would
+   overflow the pooled encode buffer.  The per-frame entry cap therefore lives
+   in the encoder (ws_encode.c::WS_ENCODE_IO_VALUES_MAX), not in a proto
+   max_count.  The TS binding (protobuf-ts) decodes it as a plain repeated. */
+message IoValues {
+    repeated IoValue values = 1;
+}
+
+/* Full descriptor of a Layer 2 entry — used in IoStruct events. */
+message IoEntry {
+    string id                  = 1;
+    string display             = 2;
+    int32  role                = 3;   /* io_role_t  (0=input, 1=output, 2=virtual) */
+    int32  dtype               = 4;   /* io_dtype_t */
+    string unit                = 5;   /* engineering-unit string (ADR-0005) */
+    float  vmin                = 6;
+    float  vmax                = 7;
+    uint32 period_us           = 8;
+    uint32 broadcast_period_us = 9;
+    uint32 array_len           = 10;
+    uint32 flags               = 11;
+    string device_id           = 12;
+    IoValue last               = 13;  /* most recent sample (may be invalid) */
+    int32  category            = 14;  /* io_category_t (0=host, 1=system, 2=onewire,
+                                         3=modbus, 4=remote, 5=controller) */
+    bool   persist_state       = 15;  /* outputs only — whether the user has
+                                         opted this id into NVS persistence
+                                         (off by default; toggled via IoPersistSet) */
+    reserved 16;                      /* was owner_unit (numeric unit index);
+                                         unit ownership is derived from the id
+                                         prefix "<unit-id>." now (ADR-0006) */
+    int32  origin              = 17;  /* io_origin_t (0=BUILTIN, 1=USER_ADDED) */
+    /* CAN domain bus: the 29-bit id this endpoint broadcasts on when
+       IO_FLAG_CAN_BCAST (bit 6 of flags) is set.  0 when not bound.  The UI
+       reads flags bit 6 for the checkbox and can_id for the id field. */
+    uint32 can_id              = 18;
+}
+
+/* Structural change push (TOPIC_IO_STRUCT). On subscribe the server replays
+   one IoStruct{REGISTERED, …} per existing entry, then continues with live
+   register/unregister events. */
+message IoStruct {
+    enum Op { REGISTERED = 0; UNREGISTERED = 1; }
+    Op      op    = 1;
+    IoEntry entry = 2;
+}
+
+/* RGB strip writes for IoSet. Wraps a repeated field so it can sit inside the
+   IoSet oneof (oneof can't carry repeated directly). */
+message Ws2812Strip {
+    repeated uint32 rgb = 1;          /* one packed 0x00RRGGBB per LED */
+}
+
+/* Per-output opt-in to NVS persistence. Off by default for every output —
+   the user toggles each one from the IO tab. When enabled, the firmware
+   immediately snapshots the current value and saves on every subsequent
+   write. When disabled, the orphan NVS entry is erased. */
+message IoPersistSet {
+    string id      = 1;
+    bool   enabled = 2;
+}
+
+/* Per-endpoint opt-in to HA-MQTT discovery (D12 — IO_FLAG_MQTT_EXPOSED).
+   Real-device endpoints default on; controller-owned endpoints opt in via the
+   scheduler's per-param expose mark.  The operator can override either from the
+   Endpoints tab.  Toggling re-publishes (or retracts) the HA entity. */
+message IoMqttSet {
+    string id      = 1;
+    bool   enabled = 2;
+}
+
+/* ===========================================================================
+   CAN domain bus — decentralized endpoint value-sharing over TWAI.
+   See doc/can_domain_bus.md.  TX broadcast is a per-endpoint opt-in toggled
+   from the Endpoints tab (parallel to IoMqttSet); RX mirrors are created from
+   the CAN discovery page.
+   =========================================================================== */
+
+/* Per-endpoint opt-in to CAN broadcast (IO_FLAG_CAN_BCAST).  When enabled the
+   can_io_bridge subscribes the endpoint and broadcasts each (throttled) sample
+   on can_id.  can_id == 0 asks the firmware to assign the structured default
+   (hash of the endpoint path); a non-zero value pins an explicit 29-bit id.
+   throttle_ms == 0 means "use the endpoint's own broadcast period, else the
+   global default". */
+message IoCanSet {
+    string id         = 1;
+    bool   enabled    = 2;
+    uint32 can_id     = 3;
+    uint32 throttle_ms = 4;
+}
+
+/* Bind an observed remote can_id into a local mirror endpoint (IO_CAT_REMOTE /
+   IO_FLAG_BRIDGED).  name/dtype are taken from the ANNOUNCE catalog when the
+   client leaves them empty/zero; an explicit value overrides.  dtype is
+   io_dtype_t numeric. */
+message CanRxBind {
+    uint32 can_id = 1;
+    string name   = 2;
+    int32  dtype  = 3;
+}
+
+/* Remove a mirror endpoint previously created by CanRxBind, addressed by its
+   io_layer id (e.g. "can.1a2b3c4d"). */
+message CanRxUnbind {
+    string id = 1;
+}
+
+/* One observed CAN id on the live bus.  name/unit/dtype are populated from the
+   ANNOUNCE catalog when the source board has announced the id; otherwise only
+   the raw fields (can_id/dlc/data/hz) carry meaning and the UI shows it as an
+   untyped stream the operator can still bind with a manual dtype. */
+message CanObserveRow {
+    uint32 can_id      = 1;
+    uint32 dlc         = 2;
+    bytes  data        = 3;       /* last payload seen, <= 8 bytes */
+    float  hz          = 4;       /* observed frame rate */
+    int64  last_seen_ms = 5;      /* age since last frame */
+    uint32 node_id     = 6;       /* source node (from id convention / ANNOUNCE) */
+    bool   is_system   = 7;       /* true for SYSTEM-class ids (bit28 = 0) */
+    string name        = 8;       /* ANNOUNCE name, "" if not announced */
+    string unit        = 9;       /* ANNOUNCE unit */
+    int32  dtype       = 10;      /* ANNOUNCE dtype (io_dtype_t), -1 if unknown */
+}
+
+/* One peer seen via SYSTEM heartbeat frames. */
+message CanPeer {
+    uint32 node_id      = 1;
+    uint32 uptime_s     = 2;
+    int64  last_seen_ms = 3;
+}
+
+/* Live observe-stream push (TOPIC_CAN_OBSERVE).  Both lists ride as callbacks
+   on the firmware side so they never inflate the pooled ServerMessage union. */
+message CanObserve {
+    repeated CanObserveRow rows  = 1;
+    repeated CanPeer       peers = 2;
+}
+
+/* Manual write to an output entry (or producer publish to a virtual). */
+message IoSet {
+    string id = 1;
+    oneof value {
+        bool        v_bool    = 2;
+        sint32      v_i32     = 3;
+        uint32      v_u32     = 4;
+        float       v_f32     = 5;
+        Ws2812Strip rgb_array = 6;
+    }
+}
+
+/* ===========================================================================
+   Device layer (Layer 1) — replaces /api/devices REST surface.
+   =========================================================================== */
+
+enum DevKind {
+    DEV_KIND_STATIC          = 0;
+    DEV_KIND_ONEWIRE         = 1;
+    DEV_KIND_MODBUS_RTU      = 2;
+    DEV_KIND_CAN_PEER        = 3;
+    DEV_KIND_MICROROS_TOPIC  = 4;
+    DEV_KIND_VIRTUAL         = 5;
+    DEV_KIND_ZIGBEE          = 6;
+}
+
+message DeviceEntry {
+    string id          = 1;
+    int32  kind        = 2;          /* DevKind numeric */
+    uint32 type_code   = 3;
+    uint32 bus         = 4;
+    uint32 address     = 5;
+    uint32 flags       = 6;
+    bytes  cfg         = 7;          /* opaque per-kind cfg blob */
+    bool   active      = 8;
+    bool   responding  = 9;          /* from probe_registry telemetry */
+    uint32 fail_streak = 10;
+    /* Per-device poll interval in seconds.  Currently populated only
+       for DEV_KIND_ZIGBEE entries (0 there means "polling disabled").
+       Reserved as 0 for other kinds — the field is harmless to read
+       but the UI hides the column for non-Zigbee rows. */
+    uint32 poll_interval_s = 11;
+    /* Zigbee-only diagnostic fields.  All zero/empty for non-Zigbee
+       rows; the UI gates each column on (kind == DEV_KIND_ZIGBEE). */
+    string manufacturer    = 12; /* Basic-cluster manufacturer_name */
+    string model           = 13; /* Basic-cluster model_identifier */
+    /* Milliseconds since last successful comm.  -1 = never seen
+       (e.g. the peer was rehydrated from NVS after reboot but hasn't
+       re-announced yet — its row in the Devices tab should show
+       "never" rather than "0 s").  Mirrors IO endpoints' age_ms
+       convention so the UI can display peer freshness with the same
+       column formatter. */
+    int64  last_seen_age_ms = 14;
+    bool   rx_on_when_idle  = 15; /* false = sleepy / battery */
+    bool   reporting_ok     = 16; /* at least one binding has confirmed reporting */
+    bool   is_tuya          = 17; /* peer advertised cluster 0xEF00 */
+    string tuya_profile     = 18; /* matched profile name, "" if unknown Tuya */
+    /* Heartbeat diagnostics — fed only by unsolicited inbound reports
+       (REPORT_ATTR + Tuya 0xEF00 frames).  Polled reads / write
+       ACKs / Basic-cluster string reads keep last_seen_age_ms fresh
+       but no longer update these.  The UI can spot a battery sensor
+       that's losing reports to Wi-Fi/Zigbee coex by watching
+       missed_intervals_now creep up while reports_total stalls.  Both
+       *_age_ms fields use -1 to mean "never observed", expected_interval
+       uses -1 to mean "not enough data to estimate". */
+    int64  last_report_age_ms   = 19;
+    uint32 reports_total        = 20; /* lifetime count of inbound reports */
+    int64  expected_interval_ms = 21;
+    uint32 missed_intervals_now = 22; /* current backlog vs expected */
+    uint32 last_lqi             = 23; /* APSDE LQI EMA, 0..255 (0 = unknown) */
+    /* Master polling toggle — independent of poll_interval_s above.
+       false (the default for every freshly-joined peer) tells the
+       worker to skip this peer entirely; the operator opts each peer
+       in via the Devices tab.  Persisted across reboots. */
+    bool   polling_enabled      = 24;
+}
+
+message DeviceList    { repeated DeviceEntry devices = 1; }
+message DeviceListReq { }
+
+/* microSD sensor-history monitor (CONFIG_APP_SD_CARD). One round-trip carries the
+   card status + a per-file breakdown of /sdcard/hist so the web shows what history
+   each sensor keeps and its size on disk. files is FT_CALLBACK (streamed) so SdInfo
+   does not bloat the ServerMessage union. */
+message SdFileInfo {
+    string name       = 1;   /* file name under /sdcard/hist, e.g. grow_tomatoes_temp.csv */
+    uint64 size_bytes = 2;
+}
+message SdInfoReq { }
+message SdInfo {
+    bool   mounted     = 1;
+    uint64 total_bytes = 2;
+    uint64 free_bytes  = 3;
+    repeated SdFileInfo files = 4;
+}
+message DeviceAdd     { DeviceEntry desc = 1; }
+message DeviceRemove  { string id = 1; }
+message DeviceSetCfg  { string id = 1; bytes cfg = 2; }
+message DeviceScan    { int32 kind = 1; uint32 addr_lo = 2; uint32 addr_hi = 3; }
+message DeviceScanStop{ int32 kind = 1; }
+
+/* Zigbee — wipe ZBOSS NVS, leave the PAN, reboot.  Empty payload; the
+   board comes back up with a fresh network on next startup. */
+message ZigbeeFactoryReset { }
+
+/* Zigbee 802.15.4 spectrum analyzer — free-running, server-pushed.
+   The ZBOSS MAC layer's energy-detect runs on a loop at the lowest
+   duration_exp (n=0 → ~31 ms/ch × 16 = ~500 ms/sweep ≈ 2 Hz) whenever
+   any session has TOPIC_ZB_SPECTRUM in its sub_mask, and stops the
+   moment the last subscriber unsubscribes — so an unwatched board
+   pays no radio cost.
+
+   Permit-join interlock: each ED sweep parks the radio off-channel for
+   ~500 ms × 16 channels, which cripples the join window for slow Tuya
+   peers.  Opening the permit-join window auto-stops the spectrum loop;
+   spectrum_start refuses while a window is open.  Restart manually
+   after pairing.
+
+   Each frame summarises a short rolling window (last N sweeps in the
+   driver) so the UI gets visible peak-hold and noise-floor traces
+   without the client having to do its own min/max bookkeeping.  All
+   three arrays are 16 entries (channel 11..26).  Values are int8 dBm;
+   -128 means "channel not measured this window". */
+message ZbSpectrumFrame {
+    /* sint32 (ZigZag) — dBm values are always negative, and a plain int32
+       sign-extends to 64-bit on the wire, costing 10 bytes per field.
+       With 48 entries that blew past the encoder's stack buffer.  ZigZag
+       fits typical -40..-110 dBm in 1-2 bytes per value. */
+    repeated sint32 dbm_min        = 1;    /* per-channel minimum  over window */
+    repeated sint32 dbm_avg        = 2;    /* per-channel average  over window */
+    repeated sint32 dbm_max        = 3;    /* per-channel maximum  over window */
+    uint32          samples        = 4;    /* sweeps merged into this frame */
+    sint32          noise_floor_dbm= 5;    /* 25th-percentile of dbm_avg */
+    uint32          sweep_ms       = 6;    /* wall-clock ms for one full sweep */
+}
+
+/* Per-peer poll cadence override.  ieee is the 16-char lowercase hex
+   IEEE that identifies the joined peer (same string used as the
+   DeviceEntry.id for DEV_KIND_ZIGBEE rows).  seconds=0 disables
+   polling for the peer; otherwise the active-poll worker reads its
+   input bindings every `seconds` seconds.  Persisted to NVS so the
+   override survives reboot. */
+message ZbSetPollInterval {
+    string ieee    = 1;
+    uint32 seconds = 2;
+}
+
+/* Per-peer master switch for the active poll worker.  Independent of
+   ZbSetPollInterval — the interval is preserved when polling is
+   toggled off so the operator can flip it back on without re-typing.
+   Default state on every freshly-joined peer is enabled=false; the
+   user opts each peer in via the Devices tab. */
+message ZbSetPollingEnabled {
+    string ieee    = 1;
+    bool   enabled = 2;
+}
+
+/* One row in a peer's Tuya DP catalog.  Mirrors the firmware's
+   tuya_dp_t.  `selected` reflects the current per-peer NVS bitmap
+   (initially seeded from the profile's default_exposed flags). */
+message ZbDpCatalogRow {
+    uint32 dp_id   = 1;
+    uint32 dp_type = 2;       /* TUYA_DP_TYPE_* */
+    bool   is_output = 3;
+    string suffix  = 4;       /* "<peer_id>.<ep>." + this becomes the io_layer id */
+    string display = 5;
+    bool   selected = 6;      /* currently registered as an io_layer endpoint */
+    /* For enum DPs (dp_type == TUYA_DP_TYPE_ENUM == 5): the value-name
+       table indexed by the raw byte the device uses.  e.g. for a
+       switch_type DP this is ["toggle", "state", "momentary"].  Empty
+       on non-enum rows or enum rows without a registered name table. */
+    repeated string enum_names = 7;
+}
+
+/* Reply to Query.WHAT_ZB_DP_CATALOG with `ieee` set to the peer's
+   IEEE.  `profile_name` is the matched profile name ("ZDMS16-2 …",
+   etc.) or empty if the peer has no Tuya profile at all (e.g. a
+   pure standard-ZCL device). */
+message ZbDpCatalog {
+    string ieee         = 1;
+    string profile_name = 2;
+    repeated ZbDpCatalogRow rows = 3;
+}
+
+/* Update the per-peer dp_select bitmap.  Bit i corresponds to
+   ZbDpCatalog.rows[i] in the same order the catalog query returned.
+   Out-of-range bits are silently ignored.  After persisting, the
+   firmware tears down the affected peer's bindings and re-registers
+   only the selected ones. */
+message ZbDpSelectSet {
+    string ieee   = 1;
+    uint32 bitmap = 2;
+}
+
+/* Toggle keep-open mode for the permit-join window.  When enabled the
+   driver re-arms the window before it expires (see Step 12 / F22-F23)
+   so a slow Tuya channel-scan doesn't miss the join slot.  Disabled
+   by default; the UI exposes this as an explicit checkbox so an
+   operator who wants the standard one-shot countdown keeps it. */
+message ZbPermitJoinKeepOpen {
+    bool enabled = 1;
+}
+
+/* ===========================================================================
+   Pull queries (one-shot fetches that the server doesn't push by default)
+   =========================================================================== */
+
+message Query {
+    enum What {
+        WHAT_NONE       = 0;
+        WHAT_SNAPSHOT   = 1;
+        WHAT_STATS      = 2;
+        WHAT_OW_SENSORS = 3;
+        WHAT_SOIL       = 4;
+        WHAT_WIFI       = 5;
+        WHAT_HA         = 6;
+        WHAT_OTA        = 7;
+        WHAT_DEVICE_LIST   = 8;
+        WHAT_DEVICE_CONFIG = 9;
+        WHAT_TIME          = 10;
+        WHAT_GROW_CONFIG   = 11;
+        WHAT_SYSTEM_FLAGS  = 12;
+        WHAT_WIREGUARD     = 13;   /* -> WgConfig (stored config, no secret) */
+        WHAT_WG_STATUS     = 14;   /* -> WgStatus (live tunnel state) */
+        WHAT_CAPABILITIES  = 15;   /* -> Capabilities (board-capability set, CAP-001) */
+        WHAT_OW_CONFIG     = 16;   /* -> OwConfig (per-channel config + caps for every
+                                      discovered DS2450/DS2423 board, ADR-0052 §7) */
+    }
+    What what = 1;
+}
+
+/* ===========================================================================
+   1-Wire expansion-board per-channel config (ADR-0052 §7).
+   ===========================================================================
+   A faithful mirror of ow_chan_cfg_t (components/devices/ow_chan_cfg) which is
+   itself a mirror of the web-ui OwChannelConfig (web-ui/src/app/models/
+   ow-channel.ts) — so the proto maps 1:1 to both.  Every per-mode settings
+   block and the calibration are plain scalar fields (no callbacks, one short
+   string for the custom formula) so the message stays flash-cheap: the encoder
+   touches only fixed scalars, no nested callback plumbing.
+
+   Status (live calibrated values / output states) is NOT carried here — it
+   rides the existing IoValue stream (TOPIC_IO), endpoint id "1wire.<rom>.P<n>"
+   / ".C<n>".  This config surface is the "real-time setup" half of §6; the
+   IoValue stream is the "responsive status" half. */
+
+/* Per-channel MODE — mirrors ow_mode_t / OwMode. voltage/ntc/pulse/encoder are
+   INPUT roles; pwm/digital_out are OUTPUT (actuator) roles. */
+enum OwMode {
+    OW_MODE_VOLTAGE     = 0;   /* DS2450 ADC, published in volts */
+    OW_MODE_NTC         = 1;   /* DS2450 ADC -> temperature via NTC */
+    OW_MODE_PULSE       = 2;   /* DS2423 counter, pulse/flow */
+    OW_MODE_ENCODER     = 3;   /* DS2423 counter pair -> position/rate */
+    OW_MODE_PWM         = 4;   /* DS2450 PWM port */
+    OW_MODE_DIGITAL_OUT = 5;   /* DS2450 port driven high/low */
+}
+
+/* ADC reference — mirrors ow_adc_ref_t / OwAdcRef. */
+enum OwAdcRef { OW_ADC_REF_VCC = 0; OW_ADC_REF_INTERNAL = 1; }
+/* Pulse edge — mirrors ow_edge_t / OwEdge. */
+enum OwEdge   { OW_EDGE_RISING = 0; OW_EDGE_FALLING = 1; OW_EDGE_BOTH = 2; }
+/* Digital-out drive — mirrors ow_drive_t. */
+enum OwDrive  { OW_DRIVE_OPEN_DRAIN = 0; OW_DRIVE_PUSH_PULL = 1; }
+/* Calibration kind — mirrors ow_cal_kind_t / OwCalKind. */
+enum OwCalKind {
+    OW_CAL_RAW      = 0;
+    OW_CAL_LINEAR   = 1;   /* y = a*x + b */
+    OW_CAL_NTC      = 2;   /* beta-model / Steinhart-Hart */
+    OW_CAL_MOISTURE = 3;   /* two-point dry/wet -> % */
+    OW_CAL_CUSTOM   = 4;   /* formula string */
+}
+
+message OwAdcSettings {           /* mirrors ow_adc_settings_t / OwAdcSettings */
+    uint32   resolution_bits = 1; /* 1..16 (DS2450 RES field) */
+    OwAdcRef ref             = 2;
+    bool     pullup          = 3;
+}
+message OwNtcSettings {           /* mirrors ow_ntc_settings_t / OwNtcSettings */
+    float dividerR  = 1;          /* fixed divider resistor, ohms */
+    float r25       = 2;          /* NTC nominal resistance @ 25C, ohms */
+    float beta      = 3;
+    /* Steinhart-Hart a/b/c; when sh_valid they supersede the beta-model. */
+    bool  sh_valid  = 4;
+    float shA       = 5;
+    float shB       = 6;
+    float shC       = 7;
+}
+message OwPulseSettings {         /* mirrors ow_pulse_settings_t / OwPulseSettings */
+    OwEdge edge        = 1;
+    uint32 debounce_ms = 2;
+    bool   pullup      = 3;
+}
+message OwEncoderSettings {       /* mirrors ow_encoder_settings_t / OwEncoderSettings */
+    uint32 pair_channel   = 1;    /* companion counter index (0/1) */
+    uint32 counts_per_rev = 2;
+    sint32 direction      = 3;    /* +1 / -1 */
+}
+message OwPwmSettings {           /* mirrors ow_pwm_settings_t / OwPwmSettings */
+    uint32 freq_hz      = 1;
+    uint32 duty_min_pct = 2;
+    uint32 duty_max_pct = 3;
+    bool   invert       = 4;
+}
+message OwDigitalOutSettings {    /* mirrors ow_digital_out_settings_t */
+    OwDrive drive         = 1;
+    uint32  initial_level = 2;    /* 0/1 */
+    bool    invert        = 3;
+}
+message OwCalibration {           /* mirrors ow_cal_t / OwCalibration */
+    OwCalKind kind    = 1;
+    float     a       = 2;        /* linear */
+    float     b       = 3;
+    float     dry_raw = 4;        /* moisture two-point */
+    float     wet_raw = 5;
+    string    formula = 6;        /* custom (OW_FORMULA_MAX-1 chars) */
+}
+
+/* One configurable port/counter.  Mirrors OwChannelConfig / ow_chan_cfg_t plus
+   the channel id and the capabilities bitmask.  All settings blocks are always
+   present (the firmware keys off `mode` and ignores the inactive ones), so the
+   message is a flat fixed-size struct — no oneof, no callbacks. */
+message OwChannelConfig {
+    /* Port id within the board: "P0".."P3" (DS2450 ADC) or "C0"/"C1" (DS2423). */
+    string channel             = 1;
+    /* Bitmask of (1 << OwMode) the hardware supports for this channel — the
+       menu renders only these (ow_chan_cfg_capabilities).  Read-only on Set. */
+    uint32 capabilities        = 2;
+    OwMode mode                = 3;
+    OwAdcSettings        adc         = 4;
+    OwNtcSettings        ntc         = 5;
+    OwPulseSettings      pulse       = 6;
+    OwEncoderSettings    encoder     = 7;
+    OwPwmSettings        pwm         = 8;
+    OwDigitalOutSettings digital_out = 9;
+    OwCalibration        cal         = 10;
+}
+
+/* One discovered DS2450/DS2423 board with its channel set. */
+message OwBoardConfig {
+    bytes  rom    = 1;            /* 8-byte 1-Wire ROM (the device key) */
+    string family = 2;           /* "ds2450" | "ds2423" */
+    string label  = 3;           /* human label (family + short rom) */
+    repeated OwChannelConfig channels = 4;
+}
+
+/* Query{WHAT_OW_CONFIG} reply: every discovered board + per-channel config +
+   capabilities.  boards rides as FT_CALLBACK so the variable-length board list
+   never inflates the shared ServerMessage union (same discipline as
+   DeviceList.devices / GrowConfig.units). */
+message OwConfig {
+    repeated OwBoardConfig boards = 1;
+}
+
+/* Live per-channel config write (ClientMessage).  Carries exactly one board's
+   ROM + one channel's config; the firmware validates mode against the channel
+   capabilities, persists to NVS (ow_chan_cfg_nvs_save), then raises the OW
+   reload signal so the running OW task re-applies the control registers without
+   a reboot — the "real-time setup" half of §6.  capabilities on the inner
+   channel is ignored on Set (server-owned). */
+message OwConfigSet {
+    bytes           rom     = 1;  /* 8-byte 1-Wire ROM of the target board */
+    OwChannelConfig channel = 2;
+}
+
+/* Boot-time subsystem enables.  Read once in app_main; toggling here
+   only persists NVS.  A reboot is required to take effect (xTaskCreate
+   sites in main.c skip allocation entirely when disabled).  The UI
+   surfaces a "Pending reboot" badge when any field differs from the
+   currently-running state. */
+message SystemFlagsSet {
+    bool onewire_enabled = 1;
+    bool modbus_enabled  = 2;
+    bool zigbee_enabled  = 3;
+    bool can_enabled     = 4;   /* CAN domain bus master enable (opt-in) */
+}
+message SystemFlags {
+    bool onewire_enabled  = 1;
+    bool modbus_enabled   = 2;
+    bool zigbee_enabled   = 3;
+    /* Build-time capability — true iff this firmware was built with
+       CONFIG_APP_ZIGBEE_SUPPORTED=y.  When false, the UI hides every
+       Zigbee panel/control regardless of zigbee_enabled, and the
+       SystemFlagsSet write of zigbee_enabled has no effect (the
+       firmware's boot-time init is gated on the same Kconfig).
+       Reported once per Query{WHAT_SYSTEM_FLAGS}; does not change at
+       runtime. */
+    bool zigbee_supported = 4;
+    bool can_enabled      = 5;   /* CAN domain bus master enable (opt-in) */
+}
+
+/* Per-peer DP catalog request — pull the matched Tuya profile's DP
+   list plus the current selection bitmap.  Reply lands as a
+   ZbDpCatalog ServerMessage. */
+message ZbDpCatalogReq {
+    string ieee = 1;
+}
+
+/* ===========================================================================
+   Time / NTP status
+   =========================================================================== */
+
+message TimeStatus {
+    bool   synced             = 1;   /* true after at least one successful SNTP sync */
+    int64  last_sync_unix_ms  = 2;   /* wall-clock at which last sync completed; 0 if never */
+    int64  now_unix_ms        = 3;   /* current wall-clock at reply time */
+    string timezone           = 4;   /* POSIX TZ string currently applied */
+    string ntp_server         = 5;   /* server lwIP is configured to use */
+    uint32 sync_period_s      = 6;   /* configured re-sync interval (seconds) */
+}
+
+/* ===========================================================================
+   WireGuard client — point-to-point VPN tunnel to a single peer.
+   =========================================================================== */
+
+/* Provisioning (client->server). Mirrors nvs_cfg_wireguard_t. private_key is
+   write-only: it is accepted here but never echoed in WgConfig. An empty
+   private_key on save leaves the stored key untouched, so the UI can re-save
+   other fields without re-entering the secret. */
+message WgSet {
+    bool   enabled         = 1;
+    string private_key     = 2;
+    string peer_public_key = 3;
+    string local_ip        = 4;   /* device tunnel IPv4 */
+    string local_netmask   = 5;   /* sizes the on-link tunnel subnet routed via wg */
+    string peer_endpoint   = 6;   /* host or IPv4 */
+    uint32 peer_port       = 7;
+    uint32 keepalive_s     = 8;   /* persistent keepalive; 0 disables */
+}
+
+/* Config readback (server->client). Never carries the private key. */
+message WgConfig {
+    bool   enabled         = 1;
+    bool   has_private_key = 2;   /* a key is stored (don't disclose it) */
+    string peer_public_key = 3;
+    string local_ip        = 4;
+    string local_netmask   = 5;
+    string peer_endpoint   = 6;
+    uint32 peer_port       = 7;
+    uint32 keepalive_s     = 8;
+}
+
+enum WgState {
+    WGSTATE_DISABLED   = 0;
+    WGSTATE_IDLE       = 1;   /* enabled, waiting on STA link / wall clock / config */
+    WGSTATE_CONNECTING = 2;   /* tunnel up locally, handshake pending */
+    WGSTATE_UP         = 3;   /* peer handshake complete */
+    WGSTATE_RETRYING   = 4;   /* last attempt failed, backing off */
+}
+
+/* Live status (server->client), polled by the UI. */
+message WgStatus {
+    WgState state         = 1;
+    bool    enabled       = 2;
+    bool    configured    = 3;   /* all required peer fields present */
+    int32   last_err      = 4;   /* esp_err_t of last failed bring-up; 0 if none */
+    uint32  retry_count   = 5;
+    uint32  state_since_s = 6;   /* seconds in the current state */
+}
+
+/* ===========================================================================
+   Grow controller — multi-unit grow executor framework
+   =========================================================================== */
+
+/* GrowKind matches grow_unit_kind_t. */
+enum GrowKind {
+    GROW_KIND_SUBSTRATE        = 0;
+    GROW_KIND_HYDRO_PURE       = 1;
+    GROW_KIND_HYDRO_SUBSTRATE  = 2;
+    GROW_KIND_AERO             = 3;
+    GROW_KIND_AQUAPONIC        = 4;
+    GROW_KIND_AQUARIUM         = 5;
+    GROW_KIND_WATER            = 6;   /* water station: base = ctrl_water_station SM */
+    GROW_KIND_CUSTOM           = 7;   /* bare unit: no scheduler / health / status LED */
+}
+
+/* GrowStage matches grow_stage_t. */
+enum GrowStage {
+    GS_IDLE      = 0;
+    GS_SEEDLING  = 1;
+    GS_VEG       = 2;
+    GS_FLOWER    = 3;
+    GS_HARVEST   = 4;
+}
+
+/* Note: the legacy GrowBinding message (role + io id, tagged with the
+   GROW_IN_* / GROW_OUT_* enums) was retired alongside grow_unit.bindings.
+   Per-controller input/output bindings are carried by ControllerBinding
+   in ControllerInfo / ControllerCreate; the unit page derives its
+   Inputs/Outputs view from those. */
+
+/* D7 — dynamic per-profile parameter schema.  A ParamDef declares one
+   tracked parameter; dtype is fixed f32 for now so it is not on the wire. */
+message ParamDef {
+    string key         = 1;   /* [a-z][a-z0-9_]*, joins grow.<i>.scheduler.<key> */
+    string label       = 2;   /* human label */
+    string unit        = 3;   /* engineering-unit hint */
+    bool   expose_io   = 4;   /* register an io_layer endpoint for this param;
+                                 default OFF since ADR-0035 (operator opts in) */
+    /* tag 5 reserved (was expose_mqtt; HA exposure is now a pure io_layer
+       concern, default on + toggled in the Endpoints tab).
+       tag 6 reserved (was photoperiod_gated; internal gating retired with
+       ADR-0027 — shaping is composed in the wiring, ADR-0035). */
+    reserved 5, 6;
+    /* ADR-0035 column kind: 0 = VALUE (one cell per stage), 1 = PHOTOPERIOD
+       (two cells per stage: begin_s, end_s local seconds-of-day; begin > end
+       wraps midnight; materializes one daynight bool output pin). */
+    uint32 kind        = 7;
+}
+
+/* D6/D7 — one stage of the dynamic working schedule.  values[] is aligned
+   index-for-index with GrowProfile.params; flags is a bitmask of
+   STAGE_FLAG_* (infinite/manual advance). */
+message GrowProfileStage {
+    string         name       = 1;
+    repeated float values     = 2;
+    uint32         duration_s  = 3;
+    uint32         flags      = 4;   /* bit0 = infinite, bit1 = manual-advance */
+}
+
+/* D6 — scheduler run-state machine. */
+enum SchedulerState {
+    SCHED_IDLE    = 0;
+    SCHED_RUNNING = 1;
+    SCHED_PAUSED  = 2;
+    SCHED_DONE    = 3;
+}
+
+/* A grow profile is a named, saved schedule template: the same column (params)
+   / row (dyn_stages) table the working schedule runs, minus run-state.
+   params/dyn_stages stream via callback (server -> client, in GrowConfig). */
+message GrowProfile {
+    uint32   id                = 1;
+    string   name              = 2;
+    GrowKind kind              = 3;
+    reserved 4, 5;             /* was advance_strategy, legacy fixed-5 stages */
+    repeated ParamDef         params       = 6;
+    repeated GrowProfileStage dyn_stages   = 7;
+    optional uint32           derived_mask = 8;
+    /* tags 9-10 reserved (were day_length_s / ramp_s; the virtual day retired
+       with ADR-0027 — real 24 h days since ADR-0035). */
+    reserved 9, 10;
+}
+
+/* Per-unit configuration the UI uploads to apply a unit. */
+message GrowUnit {
+    bool      active        = 1;
+    reserved 2;                            /* was uint32 index — identity is `id` (ADR-0006) */
+    /* Immutable unit id — the identity, both directions.  "grow.<n>" today;
+       becomes user-typed (name-transliterated) as the dynamic-unit work lands. */
+    string    id            = 24;
+    GrowKind  kind           = 3;
+    string    name          = 4;
+    uint32    profile_id    = 5;
+    GrowStage stage         = 6;
+    bool      manual_hold   = 7;
+    int64     start_ts_ms   = 8;
+    int64     stage_entered_ms = 9;
+    reserved 10, 11;                       /* was repeated GrowBinding inputs/outputs */
+    /* tag 12 was GrowLoopsCfg gains — removed in the controller refactor;
+       per-loop PID gains are now per-controller params shipped via
+       ControllerCreate. */
+    /* live snapshot fields (server → client only): */
+    float     health        = 13;
+    uint32    flags         = 14;
+    reserved 15;  /* was status_str — the baked per-unit status string; removed
+                     with the inline diagnostics monolith (ADR-0011).  Per-unit
+                     readouts come from the display_box gateway + the scheduler
+                     outputs the UI already reads. */
+    /* D6 — persisted scheduler run-state.  start_unix is latched at Start
+       (back-dated by elapsed_offset_s for mid-grow entry); resumes across
+       toggle/reboot. (foundation: carried, not yet acted on.) */
+    optional SchedulerState sched_state      = 16;
+    optional int64          sched_start_unix = 17;
+    optional uint32         elapsed_offset_s = 18;
+    reserved 19;  /* was target_mask (GROW_TARGET_* bitmask); retired, ADR-0002 */
+    /* D7 dynamic working schedule (the live schedule this unit runs).
+       sched_params/sched_stages stream via callback so they do not inflate
+       the pooled ServerMessage union.  derived_mask is a bitmask of
+       SCHED_DERIVED_* (stage idx/name, elapsed, time-to-next, progress,
+       photoperiod) marking which derived outputs are exposed to the io
+       layer.  Omitted on a set => keep current working schedule. */
+    repeated ParamDef         sched_params  = 20;
+    repeated GrowProfileStage sched_stages  = 21;
+    optional uint32           derived_mask  = 22;
+    reserved 23;  /* was module_mask; firmware no longer composes a controller
+                     graph from capability modules — the constructor is a UI
+                     concern, the graph is authored in the UI + ctrl_persist. */
+    /* tags 25-26 reserved (were day_length_s / ramp_s; the virtual day
+       retired with ADR-0027 — real 24 h days since ADR-0035). */
+    reserved 25, 26;
+    /* ADR-0027 §5 phase-preserving run-state correction (client -> server,
+       only meaningful with sched_state).  When either is present the firmware
+       IGNORES sched_start_unix and derives the new anchor from the unit's
+       CURRENT elapsed: set_days replaces the whole-day count and KEEPS the
+       current virtual time-of-day; set_tod_s is the separate, explicit
+       time-of-day move.  Never echoed by the server. */
+    optional uint32           sched_set_days  = 27;
+    /* tag 28 reserved (was sched_set_tod_s; the wall clock owns time-of-day
+       since ADR-0035 — only the whole-day anchor correction remains). */
+    reserved 28;
+}
+
+message GrowUnitSet      { GrowUnit unit  = 1; }
+/* Address by id (ADR-0006). */
+message GrowUnitRemove   { reserved 1; string id = 2; }
+/* Grow-only factory reset: wipe all units / schedules / profiles + the persisted
+   controller graph; wifi creds + system settings (passwords, OTA) + theme survive.
+   The device reboots after acking.  Distinct from the wifi-wiping FactoryReset. */
+message GrowEraseSettings { }
+/* Save-as-profile (client -> server).  Flattened (not GrowProfile-wrapped) and
+   carrying submsg_callback so params/stages — callback fields — can be decoded
+   inside the payload oneof, the same pattern as GrowScheduleSet. */
+message GrowProfileSet {
+    uint32                    id           = 1;   /* 0 => allocate a new id */
+    string                    name         = 2;
+    GrowKind                  kind         = 3;
+    repeated ParamDef         params       = 4;
+    repeated GrowProfileStage stages       = 5;
+    optional uint32           derived_mask = 6;
+    /* tags 7-8 reserved (were day_length_s / ramp_s; the virtual day retired
+       with ADR-0027 — real 24 h days since ADR-0035). */
+    reserved 7, 8;
+}
+
+/* D7 client->server working-schedule edit (ADR-0002).  params (columns) and
+   stages (rows) stream via callback so the ClientMessage union holds only two
+   16 B pb_callback_t — not the ~1.5 KB fixed schedule — and the wire carries
+   only the rows/columns actually present (dynamic).  The firmware decode
+   callbacks clamp to SCHED_MAX_PARAMS / SCHED_MAX_STAGES (the strict limiter);
+   run-state + anchor stay unit-authoritative (Start/Pause), so they are not on
+   this message.  Each stage's values[] aligns index-for-index with params. */
+message GrowScheduleSet {
+    reserved 1;                                   /* was uint32 index */
+    repeated ParamDef         params       = 2;
+    repeated GrowProfileStage stages       = 3;
+    optional uint32           derived_mask = 4;   /* SCHED_DERIVED_* exposed bits */
+    string                    id           = 5;   /* target unit id (ADR-0006) */
+    /* tags 6-7 reserved (were day_length_s / ramp_s; the virtual day retired
+       with ADR-0027 — real 24 h days since ADR-0035). */
+    reserved 6, 7;
+}
+
+/* User-defined per-unit IO endpoint (T15). name is relative; full
+   io_layer id = "<unit_id>.<name>". */
+message GrowUserIoDesc {
+    string name  = 1;    /* [a-z][a-z0-9_]*, < 24 chars */
+    int32  role  = 2;    /* io_role_t (0=input, 1=output, 2=virtual) */
+    int32  dtype = 3;    /* io_dtype_t (0=bool, 1=i32, 2=u32, 3=f32) */
+    string unit  = 4;    /* engineering-unit hint, <= 7 chars */
+    optional uint32 flags = 5; /* D12 — io_layer flags; carries IO_FLAG_MQTT_EXPOSED */
+}
+/* scope: 0 / omitted = this-unit (<unit_id>.<name>).  1 = board (sig.<name>)
+   is the recorded D2 intent but has NO implementation yet — the handler
+   refuses it with ERR_UNSUPPORTED rather than silently creating a unit
+   endpoint.  Field kept so the tag stays burned for the real board-scope
+   owner when one exists. */
+message GrowUserIoAdd     { string unit_id = 1; GrowUserIoDesc desc = 2; optional int32 scope = 3; }
+message GrowUserIoRemove  { string unit_id = 1; string         name = 2; }
+message GrowUserIoListReq { string unit_id = 1; }
+message GrowUserIoList    { string unit_id = 1; repeated GrowUserIoDesc entries = 2; }
+/* Control Box (ADR-0059) — per-unit opaque JSON blob the firmware STORES but
+   never decodes; the web UI owns the structure (web-ui control-box.ts). An empty
+   `data` on ControlBoxSet clears the unit's boxes. ControlBoxGet replies with
+   ControlBoxBlob. */
+message ControlBoxGet     { string unit_id = 1; }
+message ControlBoxSet     { string unit_id = 1; bytes data = 2; }
+message ControlBoxBlob    { string unit_id = 1; bytes data = 2; }
+message GrowProfileRemove{ uint32 id = 1; }
+message GrowStageAdvance { string unit_id = 1; GrowStage stage = 2; bool manual = 3; }
+
+/* Full snapshot (response to Query{WHAT_GROW_CONFIG}). */
+message GrowConfig {
+    repeated GrowUnit       units    = 1;     /* active units (variable count) */
+    repeated GrowProfile    profiles = 2;
+    reserved 3;                                /* was GrowWaterStation water */
+}
+
+/* Per-unit live diagnostics push (GrowDiag) was removed — the
+   message had no firmware producer and no UI subscriber.  Tag 31
+   on ServerMessage and topic bit 0x100 are reserved at their
+   declarations above to prevent silent reuse. */
+
+/* ===========================================================================
+   Phase 6 — controller_registry introspection
+   ===========================================================================
+   ListControllers: client requests the live controller set; server replies
+   with one ControllerList containing a ControllerInfo per instance.
+   Bindings are carried back as resolved io_layer ids so the UI can
+   render the wiring without a separate query. */
+
+message ControllerListReq { }
+
+message ControllerInfo {
+    string   kind_name   = 1;
+    string   instance_id = 2;
+    string   status_str  = 3;
+    uint32   flags       = 4;
+    bool     enabled     = 5;
+    /* Slot bindings — index in the repeated field is the slot index.
+       Empty strings fill unbound trailing slots so the slot index in
+       the wire repr matches the controller_t.inputs[] / outputs[] slot
+       on the firmware side. */
+     repeated string inputs  = 6;
+     repeated string outputs = 7;
+     bytes           params  = 8;
+     /* True for controllers spawned via grow_preset_apply's mandatory set
+        (e.g. per-unit scheduler).  WS handle_ctrl_destroy refuses to
+        destroy these; the UI hides Destroy on their right-click menu. */
+     bool            is_builtin = 9;
+     /* R6 — live output telemetry.  output_values streams the controller's
+        last emitted output cache (controller_t.out_cache); index aligns with
+        the outputs[] slot.  output_valid_mask bit i set == slot i has been
+        written at least once this session (out_valid_mask). Streamed via
+        callback from the live snapshot, same as inputs/outputs. */
+     repeated float  output_values    = 10;
+     optional uint32 output_valid_mask = 11;
+ }
+
+message ControllerList {
+    repeated ControllerInfo controllers = 1;
+}
+
+/* Live controller output telemetry (the pin-value stream).  A direct
+   pin-to-pin link (ADR-0015/0026) has no io_layer endpoint, so its wire
+   value cannot ride TOPIC_IO — this push streams out_cache deltas instead.
+   Sent on TOPIC_CONTROLLERS by a periodic engine job; an entry appears only
+   when the controller's outputs changed since the last push (out_epoch),
+   so an idle graph costs nothing. values/valid_mask follow the
+   ControllerInfo.output_values slot-index alignment rule. */
+message CtrlOutValsEntry {
+    string         instance_id = 1;
+    repeated float values      = 2;   /* up to the highest written slot */
+    uint32         valid_mask  = 3;
+}
+message CtrlOutValsPush {
+    repeated CtrlOutValsEntry entries = 1;
+}
+
+/* Phase 6.B — simple write operations.  All three reply with Ack;
+   detail carries the controller's render_status if the operation
+   succeeded, or an error reason otherwise. */
+message ControllerSetEnabled { string instance_id = 1; bool  enabled = 2; }
+message ControllerSetTarget  { string instance_id = 1; float target  = 2; }
+message ControllerDestroy    { string instance_id = 1; }
+/* ADR-0017 A5 — acknowledge a latched safety interlock.  Routes to the kind's
+   set_runtime_flags(0) hook, which clears the trip and resets the auto-recover
+   escalation (retry counter + hard latch).  Reply is Ack/Error. */
+message ControllerAcknowledge { string instance_id = 1; }
+/* Phase 6.B+ — live params update.  `params` is the same opaque
+   bytes blob as ControllerCreate.params; the WS handler bounds-checks
+   it against the kind's vt->params_size before calling vt->set_params. */
+message ControllerSetParams  { string instance_id = 1; bytes params  = 2; }
+message ControllerBind {
+    string                     instance_id = 1;
+    repeated ControllerBinding inputs      = 2;
+    repeated ControllerBinding outputs     = 3;
+}
+
+ /* Phase 6.C — controller creation.
+ * The params blob is opaque on the wire — the client (UI) is expected
+ * to know the kind's params layout and ship it correctly sized
+ * (matching the kind's vt->params_size).  The SPA carries that layout
+ * statically in controller-kinds.ts; the params struct is part of the
+ * firmware/UI build contract, not a runtime discovery surface. */
+message ControllerBinding { uint32 slot = 1; string io_id = 2; }
+
+message ControllerCreate {
+    string                     kind        = 1;
+    string                     instance_id = 2;
+    bytes                      params      = 3;
+    repeated ControllerBinding inputs      = 4;
+    repeated ControllerBinding outputs     = 5;
+}
+
+/* Atomic batch controller-graph apply (client -> server).  Replaces the
+ * per-controller ctrl_create storm the unit constructor used to emit: the whole
+ * dependency-ordered chunk lands in one frame, the server creates every node
+ * then binds (forward references within the chunk resolve), and rolls the whole
+ * chunk back on a hard create failure.  Idempotent: a node whose instance_id
+ * already exists is re-bound, not re-created.  `nodes` is an FT_CALLBACK field
+ * (decoded one element at a time) so it never inflates the shared ClientMessage
+ * decode struct — a fixed inline array of ControllerCreate would add several KB
+ * of permanent RAM. */
+message CtrlGraphApply {
+    repeated ControllerCreate nodes = 1;
+}
+
+
+/* Phase 6.E — controller membership push event.
+ * Server-side unsolicited frame (request_id == 0) emitted on every
+ * controller_registry_create / _destroy success.  Subscribed via
+ * TOPIC_CONTROLLERS.  Status / flag deltas are intentionally not
+ * pushed — the UI polls ListControllers for those (cheap; the live
+ * registry is small) so a stalled status field doesn't fan out into
+ * an event flood. */
+message ControllerEvent {
+    enum Op { ADDED = 0; REMOVED = 1; }
+    Op     op          = 1;
+    string kind_name   = 2;
+    string instance_id = 3;
+}
+
+/* Deepening 01 — batched controller membership delta.
+ * One unsolicited frame (request_id == 0) per ctrl_graph transaction,
+ * collapsing the per-node ControllerEvent storm into a single message so a
+ * unit scaffold / restore / WS graph apply announces its whole membership
+ * change at once.  `added` carries the created controllers (each an ADDED
+ * ControllerEvent with kind_name + instance_id); `removed` carries the
+ * destroyed instance ids.  Subscribed via TOPIC_CONTROLLERS, same as the
+ * per-node ControllerEvent it replaces.  The client merges both lists in one
+ * pass.  added/removed ride as callbacks so the variable-length lists never
+ * inflate the shared ServerMessage union. */
+message CtrlGraphChanged {
+    repeated ControllerEvent added   = 1;
+    repeated string          removed = 2;
+}

@@ -1,0 +1,13 @@
+{
+  "params": [
+    { "key": "target_temp", "label": "Air temp", "unit": "C", "kind": 0, "expose_io": true },
+    { "key": "target_rh",   "label": "Humidity", "unit": "%", "kind": 0, "expose_io": true },
+    { "key": "light",       "label": "Photoperiod",           "kind": 1 }
+  ],
+  "stages": [
+    { "name": "Seedling", "duration_s": 1209600, "values": [22.0, 70.0, 21600, 64800] },
+    { "name": "Veg",      "duration_s": 2419200, "values": [24.0, 60.0, 21600, 79200] },
+    { "name": "Flower",   "duration_s": 0, "flags": 1, "values": [26.0, 50.0, 28800, 72000] }
+  ],
+  "derived_mask": 0
+}
