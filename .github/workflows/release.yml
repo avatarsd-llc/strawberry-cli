@@ -1,12 +1,12 @@
 # Release for @avatarsd-llc/strawberry-cli.
 #
 # Fires on a v* tag. Regenerates the codec, runs the gate (typecheck + tests),
-# builds, and packs the tarball, then publishes to GitHub Packages
-# (npm.pkg.github.com) and attaches the .tgz to the GitHub Release.
+# builds, and packs the tarball, then publishes to the public npm registry
+# (npmjs.org) and attaches the .tgz to the GitHub Release.
 #
-# No manually-created credential is required: the publish authenticates with the
-# automatic GITHUB_TOKEN, which `permissions.packages: write` scopes for publish.
-# The package scope (@avatarsd-llc) must match the repo owner — it does.
+# Publishing requires the NPM_TOKEN repo secret (an npmjs.com Automation token for
+# the @avatarsd-llc org). Without it the publish step fails — that secret is the one
+# credential you create. Public-npm installs are anonymous: `npm i @avatarsd-llc/strawberry-cli`.
 name: release
 
 on:
@@ -16,7 +16,6 @@ on:
 
 permissions:
   contents: write   # softprops/action-gh-release creates the GitHub Release
-  packages: write   # npm publish -> GitHub Packages via GITHUB_TOKEN
 
 jobs:
   release:
@@ -27,10 +26,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          # Writes an .npmrc pointing the @avatarsd-llc scope at GitHub Packages
-          # and wires NODE_AUTH_TOKEN as the auth token for that host.
-          registry-url: https://npm.pkg.github.com
-          scope: '@avatarsd-llc'
+          # Writes an .npmrc for the public registry and wires NODE_AUTH_TOKEN
+          # as its auth token (consumed by `npm publish` below).
+          registry-url: https://registry.npmjs.org
           cache: npm
 
       - name: Install dependencies
@@ -52,13 +50,13 @@ jobs:
       - name: Pack tarball
         run: npm pack
 
-      # Publishes to GitHub Packages. The `files` allowlist in package.json scopes
-      # the payload (dist, bin, skill, proto, docs); publishConfig.registry pins
-      # the target registry. Auth is the automatic per-run GITHUB_TOKEN.
-      - name: Publish to GitHub Packages
-        run: npm publish
+      # Publishes to the public npm registry. The `files` allowlist in package.json
+      # scopes the payload (dist, bin, skill, proto, docs); --access public makes the
+      # scoped package world-installable. Auth is the NPM_TOKEN Automation secret.
+      - name: Publish to npm
+        run: npm publish --access public
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: GitHub Release (attach tarball)
         uses: softprops/action-gh-release@v2
