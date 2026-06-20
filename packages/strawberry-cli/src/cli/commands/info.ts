@@ -36,7 +36,11 @@ export async function cmdInfo(p: ParsedArgs): Promise<void> {
       }
       if (systemFlags) {
         printLine('system_flags');
-        printKv(Object.entries(systemFlags).map(([k, v]) => [`  ${k}`, v]));
+        // A capability-gated subsystem the board lacks is "absent", not "disabled":
+        // the enable flag is meaningless when zigbee isn't compiled in (4MB image).
+        const zbAbsent = !!capabilities && !capabilities.zigbee;
+        printKv(Object.entries(systemFlags).map(([k, v]) =>
+          [`  ${k}`, k === 'zigbeeEnabled' && zbAbsent ? 'absent (not built)' : v]));
       }
       if (wifiState) {
         printLine('wifi');

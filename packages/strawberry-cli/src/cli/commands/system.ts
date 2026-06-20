@@ -64,17 +64,27 @@ async function systemFlags(p: ParsedArgs): Promise<void> {
     const cur = reply.oneofKind === 'systemFlags' ? reply.systemFlags : null;
     if (!cur) throw new CliError('cannot read current SystemFlags');
 
+    // Capability gate: zigbee may be ABSENT (not compiled — the 4MB image), in
+    // which case its enable flag is meaningless.  Report it "absent" rather than
+    // "disabled", and refuse an enable attempt for a subsystem the board lacks.
+    const capsReply = await session.client.query<'capabilities'>(Query_What.CAPABILITIES);
+    const zbAbsent = capsReply.oneofKind === 'capabilities' && !capsReply.capabilities.zigbee;
+    const renderFlags = (f: object): [string, unknown][] =>
+      Object.entries(f).map(([k, v]) =>
+        [k, k === 'zigbeeEnabled' && zbAbsent ? 'absent (not built)' : v] as [string, unknown]);
+
     const onewire = triState(p, 'onewire', cur.onewireEnabled);
     const modbus = triState(p, 'modbus', cur.modbusEnabled);
     const zigbee = triState(p, 'zigbee', cur.zigbeeEnabled);
+    if (zbAbsent && zigbee) throw new CliError('zigbee is not available on this board (not compiled in)');
     const can = triState(p, 'can', cur.canEnabled);
 
     const changed = onewire !== cur.onewireEnabled || modbus !== cur.modbusEnabled
       || zigbee !== cur.zigbeeEnabled || can !== cur.canEnabled;
 
     if (!changed) {
-      if (flagBool(p, 'json')) printJson({ ok: true, changed: false, flags: cur });
-      else { printLine('system flags (unchanged)'); printKv(Object.entries(cur)); }
+      if (flagBool(p, 'json')) printJson({ ok: true, changed: false, flags: cur, zigbeeAbsent: zbAbsent });
+      else { printLine('system flags (unchanged)'); printKv(renderFlags(cur)); }
       return;
     }
 
@@ -84,7 +94,7 @@ async function systemFlags(p: ParsedArgs): Promise<void> {
     });
     const next = { onewireEnabled: onewire, modbusEnabled: modbus, zigbeeEnabled: zigbee, canEnabled: can };
     if (flagBool(p, 'json')) printJson({ ok: true, changed: true, flags: next, note: 'pending reboot' });
-    else { printLine('system flags set (pending reboot)'); printKv(Object.entries(next)); }
+    else { printLine('system flags set (pending reboot)'); printKv(renderFlags(next)); }
   } finally {
     dispose(session);
   }
