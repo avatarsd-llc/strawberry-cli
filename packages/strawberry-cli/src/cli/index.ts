@@ -48,7 +48,7 @@ const COMMANDS: CommandSpec[] = [
   { name: 'system', summary: 'Persisted config / boot subsystem flags', usage: 'system <config|flags> --host H', run: cmdSystem },
   { name: 'grow', summary: 'Build a unit: units / endpoints / schedule', usage: 'grow <unit-set|unit-remove|unit-list|io-add|io-remove|io-list|schedule-set> --host H', run: cmdGrow },
   { name: 'controllers', summary: 'Wire the controller graph: apply / list / destroy', usage: 'controllers <graph-apply|list|destroy> --host H', run: cmdControllers },
-  { name: 'diag', summary: 'Health: heap / stress / logs', usage: 'diag <heap|stress|logs> --host H', run: cmdDiag },
+  { name: 'diag', summary: 'Health: heap / stress / logs', usage: 'diag <heap|stress|logs> --host H [stress: --units N --controllers M --sessions S --aggressive --json]', run: cmdDiag },
   { name: 'reboot', summary: 'Reboot / factory-reset / grow-erase', usage: 'reboot [--factory-reset|--grow-erase] --host H', run: cmdReboot },
   { name: 'raw', summary: 'Send any ClientMessage from JSON (escape hatch)', usage: 'raw --msg FILE.json --host H', run: cmdRaw },
   { name: 'help', summary: 'List every command (--json for machine form)', usage: 'help [--json]', run: cmdHelp },
@@ -59,6 +59,7 @@ const BOOLEAN_FLAGS = new Set<string>([
   'json', 'active', 'enabled', 'mqtt',
   'factory-reset', 'grow-erase',
   'no-prompt',
+  'aggressive',
   'onewire', 'modbus', 'zigbee', 'can',
   'no-onewire', 'no-modbus', 'no-zigbee', 'no-can',
 ]);

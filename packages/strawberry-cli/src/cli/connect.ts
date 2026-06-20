@@ -13,7 +13,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { readFileSync, mkdirSync } from 'node:fs';
 import { createInterface } from 'node:readline';
-import { DeviceClient, wsUrlForHost, type TokenStore } from '@avatarsd-llc/strawberry-client';
+import { DeviceClient, wsUrlForHost, MemoryTokenStore, type TokenStore } from '@avatarsd-llc/strawberry-client';
 import { NodeWsTransport, FileTokenStore } from '@avatarsd-llc/strawberry-client/node';
 import { CliError } from './output.js';
 import { flagStr, flagBool, type ParsedArgs } from './args.js';
@@ -140,6 +140,30 @@ export async function openSession(p: ParsedArgs): Promise<Session> {
     }
   }
 
+  return { client, host };
+}
+
+/**
+ * Open a fresh, independently-authed session that does NOT share the per-host
+ * token file — each gets a MemoryTokenStore so it consumes its own authed slot
+ * on the device. Used by `diag stress --sessions` to drive S concurrent logins
+ * against WS_MAX_AUTHED_CLIENTS; never resumes, always runs a full HMAC login.
+ * Throws (with the device's error) when the cap rejects the login.
+ */
+export async function openFreshSession(host: string, password: string, ttlMs = 0): Promise<Session> {
+  const client = await makeClient(host, new MemoryTokenStore());
+  try {
+    await client.connect();
+  } catch (e) {
+    client.disconnect();
+    throw new Error(`cannot reach ${host}: ${(e as Error).message}`);
+  }
+  try {
+    await client.login(password, ttlMs);
+  } catch (e) {
+    client.disconnect();
+    throw e;
+  }
   return { client, host };
 }
 
