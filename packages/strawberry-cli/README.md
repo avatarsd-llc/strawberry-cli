@@ -34,7 +34,7 @@ crosses the wire**. Global flags: `--host`, `--password` / `--password-file`,
 |---------------|---------|
 | `info`        | Connect + print capabilities / system flags / Wi-Fi (alias: `connect`). |
 | `query`       | One-shot pull of a device state (14 verbs, e.g. `capabilities`, `wifi`, `device_config`, `grow_config`, `ota`, `wg_status`, `ow_config`). |
-| `auth`        | SEC-001 session: `login` / `resume` / `revoke`; writes a 0600 token file. |
+| `auth`        | HMAC session: `login` / `resume` / `revoke`; writes a 0600 token file. |
 | `net`         | Provision Wi-Fi STA creds / Home-Assistant MQTT; read net info (`wifi`/`ha`/`info`). |
 | `provision`   | Convenience wrapper: `wifi` / `wireguard` / `identity`. |
 | `wg`          | WireGuard fleet overlay: `apply` a wg-quick `.conf` / `disable` / `status`. |
@@ -59,15 +59,23 @@ from fresh to running by sequencing the per-step skills, each of which drives th
 `strawberry help --json` so every step uses the device's *provable* command vocabulary
 rather than a guessed one.
 
+**Coverage.** The library and CLI expose the board's *full* WS+protobuf command surface —
+all **64** `ClientMessage` commands, **38** `ServerMessage` types, **17** query kinds and
+**13** pub/sub topics — round-tripped by a **106-case** protocol matrix, so an agent can
+reach every documented board capability from a single client. Behaviour against live
+hardware is tracked by a separate HIL acceptance matrix; a few advanced flows (e.g.
+cross-process token *resume*) are firmware-version-dependent and flagged in the relevant
+skill rather than silently assumed.
+
 The orchestrator chains these per-step skills (each is also usable on its own — see
 [`skill/README.md`](./skill/README.md)):
 
 | Skill | Stage |
 |-------|-------|
-| [`reach-and-auth`](./skill/reach-and-auth/SKILL.md) | Find the board on the LAN (WS probe, no mDNS), confirm by MAC, SEC-001 login, persist a 0600 token. |
+| [`reach-and-auth`](./skill/reach-and-auth/SKILL.md) | Find the board on the LAN (WS probe, no mDNS), confirm by MAC, HMAC login, persist a 0600 token. |
 | [`provision-network`](./skill/provision-network/SKILL.md) | Join Wi-Fi STA, optional HA MQTT, optional WireGuard fleet join. |
 | [`flash-ota`](./skill/flash-ota/SKILL.md) | Bring to target firmware/web-UI revision (app/spa/combined), validated dwell+3x. |
-| [`config-hardware`](./skill/config-hardware/SKILL.md) | Persisted config + boot subsystem flags + 1-Wire IO boards (ADR-0052). |
+| [`config-hardware`](./skill/config-hardware/SKILL.md) | Persisted config + boot subsystem flags + 1-Wire IO boards. |
 | [`build-grow-unit`](./skill/build-grow-unit/SKILL.md) | Compose a cultivation unit: create, add IO, atomic graph-apply, schedule, optional Control Box. |
 | [`import-export`](./skill/import-export/SKILL.md) | Lossless save/restore of a unit or whole-device design; secrets redacted, device key never serialized. |
 | [`diagnose`](./skill/diagnose/SKILL.md) | Health pass: heap trend, system stress, capacity boundary, JSONL recording. |

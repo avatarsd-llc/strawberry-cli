@@ -38,7 +38,7 @@ const client = DeviceClient.forWsHost('192.168.1.117', {
 });
 
 await client.connect();                 // opens the transport; auto-resumes a stored token
-await client.login('strawberry');       // SEC-001 HMAC; plaintext password NEVER hits the wire
+await client.login('strawberry');       // HMAC; plaintext password NEVER hits the wire
 
 const caps = await client.query(Query_What.CAPABILITIES); // typed one-shot pull
 await client.sendExpectAck(commands.growUnitSet({ id: 'grow.1', name: 'Basil', active: true }));
@@ -74,7 +74,7 @@ directions; `request_id == 0` means an unsolicited push). The current surface:
 | `Query.What` pullable states | **17** |
 | push `Topic`s | **13** |
 
-Auth is **SEC-001** HMAC challenge-response: `AuthChallengeReq` -> `AuthChallenge{nonce}`
+Auth is **HMAC** HMAC challenge-response: `AuthChallengeReq` -> `AuthChallenge{nonce}`
 -> `HMAC-SHA256(password, nonce)` computed in **pure JS** (the device serves over plain
 `http`, where `crypto.subtle` is `undefined`, so there is no `crypto.subtle` /
 `node:crypto` dependency) -> `AuthLogin{hmac}` -> `AuthOk{token}`. The plaintext password
