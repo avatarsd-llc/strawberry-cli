@@ -1,5 +1,5 @@
 ---
-name: flash-ota
+name: strawberry-flash
 description: >
   Bring a Gorshok-v4 board to the target firmware/web-UI revision over WS: upload an app-slot,
   spa-partition, or combined (fw+spa) image, then validate with dwell+3x — confirm the reboot
@@ -8,7 +8,7 @@ description: >
   push firmware/an OTA, update the web UI, or upload a combined image.
 ---
 
-# flash-ota — push firmware/web-UI over WS, validated dwell+3x
+# strawberry-flash — push firmware/web-UI over WS, validated dwell+3x
 
 Flash the board to a target revision over the existing WebSocket (no separate HTTP/POST path,
 no USB) and **prove** the reboot recovered cleanly before declaring success. Everything here runs
@@ -42,14 +42,14 @@ WS+protobuf core). This skill supersedes `tools/ota_upload.py` (push OTA),
 - **Re-authenticate after the reboot** via the stored token (`strawberry auth resume`); the old
   socket is gone.
 - **Keep WS clients <= 2** — the C6 httpd wedges with 3 concurrent clients. Do not flash while a
-  diagnose/record stream is also attached.
+  strawberry-diagnose/record stream is also attached.
 - The CLI vocabulary is generated from the library's live protobuf enums — read it with
   `strawberry help --json`, never hard-code flag names from memory.
 
 ## Prerequisites
 
 1. The board is reachable and you have an authenticated, resumable session — run the
-   `reach-and-auth` skill first. You should hold `$HOST` and a **0600** `--token-file`.
+   `strawberry-reach` skill first. You should hold `$HOST` and a **0600** `--token-file`.
 
    ```bash
    HOST=ws://<ip>/ws          # the row whose MAC matches the target board
@@ -196,8 +196,8 @@ scripts/validate-dwell-3x.sh --host "$HOST" --token-file "$TOKEN" \
 
 ## See also
 
-- Orchestrator: `setup-board` (step 6 is this skill). Prereq: `reach-and-auth` ($HOST + token).
-  Follow-up health: `diagnose`.
+- Orchestrator: `strawberry-board` (step 6 is this skill). Prereq: `strawberry-reach` ($HOST + token).
+  Follow-up health: `strawberry-diagnose`.
 - OTA wire + image packing: `strawberry-fw/doc/ota_tooling.md`; packers
   `tools/mk_spa_partition.py`, `tools/mk_combined.py` (kept; only the upload path moves to the CLI).
 - Library: `@avatarsd-llc/strawberry-client` — the shared WS+protobuf core.

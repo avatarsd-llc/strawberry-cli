@@ -8,9 +8,9 @@ each `<name>/SKILL.md` on its own.
 
 ## Where to start
 
-- **Setting up a board end to end?** Invoke **`setup-board`** — the orchestrator. It
+- **Setting up a board end to end?** Invoke **`strawberry-board`** — the orchestrator. It
   sequences every per-step skill in the canonical order and stops for sign-off before
-  destructive steps. See [`setup-board/SKILL.md`](./setup-board/SKILL.md).
+  destructive steps. See [`strawberry-board/SKILL.md`](./strawberry-board/SKILL.md).
 - **Doing one stage only?** Pick the matching per-step skill directly. The full table
   (purpose + key CLI verbs) is in [`README.md`](./README.md).
 
@@ -18,14 +18,14 @@ each `<name>/SKILL.md` on its own.
 
 | Skill | What it drives |
 |-------|----------------|
-| [`setup-board`](./setup-board/SKILL.md) | Orchestrator: fresh board -> running+configured, sequencing all of the below. |
-| [`reach-and-auth`](./reach-and-auth/SKILL.md) | Discover by MAC (WS probe, no mDNS), HMAC login, persist a 0600 token. |
-| [`provision-network`](./provision-network/SKILL.md) | Wi-Fi STA, optional HA MQTT, optional WireGuard fleet join. |
-| [`flash-ota`](./flash-ota/SKILL.md) | OTA app/spa/combined over WS, validated dwell+3x. |
-| [`config-hardware`](./config-hardware/SKILL.md) | Persisted hardware config, boot subsystem flags, 1-Wire IO boards. |
-| [`build-grow-unit`](./build-grow-unit/SKILL.md) | Compose a cultivation unit: endpoints, atomic controller graph, schedule, Control Box. |
-| [`import-export`](./import-export/SKILL.md) | Lossless unit/device blueprint save + restore (secrets redacted, device key never serialized). |
-| [`diagnose`](./diagnose/SKILL.md) | Heap trend, system stress, capacity boundary, JSONL stream recording. |
+| [`strawberry-board`](./strawberry-board/SKILL.md) | Orchestrator: fresh board -> running+configured, sequencing all of the below. |
+| [`strawberry-reach`](./strawberry-reach/SKILL.md) | Discover by MAC (WS probe, no mDNS), HMAC login, persist a 0600 token. |
+| [`strawberry-provision`](./strawberry-provision/SKILL.md) | Wi-Fi STA, optional HA MQTT, optional WireGuard fleet join. |
+| [`strawberry-flash`](./strawberry-flash/SKILL.md) | OTA app/spa/combined over WS, validated dwell+3x. |
+| [`strawberry-config`](./strawberry-config/SKILL.md) | Persisted hardware config, boot subsystem flags, 1-Wire IO boards. |
+| [`strawberry-unit`](./strawberry-unit/SKILL.md) | Compose a cultivation unit: endpoints, atomic controller graph, schedule, Control Box. |
+| [`strawberry-import-export`](./strawberry-import-export/SKILL.md) | Lossless unit/device blueprint save + restore (secrets redacted, device key never serialized). |
+| [`strawberry-diagnose`](./strawberry-diagnose/SKILL.md) | Heap trend, system stress, capacity boundary, JSONL stream recording. |
 
 ## How these skills work
 

@@ -1,5 +1,5 @@
 ---
-name: reach-and-auth
+name: strawberry-reach
 description: >
   Reach a Gorshok-v4 board on the LAN and establish an authenticated session: discover
   candidates by WS probe (firmware has NO mDNS), confirm the target by MAC (DHCP drifts),
@@ -9,7 +9,7 @@ description: >
   authenticate, or establish a session before any other board operation.
 ---
 
-# reach-and-auth — find a board, log in, keep the session
+# strawberry-reach — find a board, log in, keep the session
 
 The mandatory first step for every other board skill. It produces two things the rest of the
 flow consumes:
@@ -144,8 +144,8 @@ strawberry query capabilities --host "$HOST" --json   # board_rev, display_kind,
 strawberry query wifi         --host "$HOST" --json   # current Wi-Fi state + LAN IP (confirms reachability)
 ```
 
-`query capabilities` -> `Capabilities`; `query wifi` -> `WifiState`. Record both — `setup-board`
-and `config-hardware` gate their steps on the capability flags (e.g. don't toggle Zigbee on a board
+`query capabilities` -> `Capabilities`; `query wifi` -> `WifiState`. Record both — `strawberry-board`
+and `strawberry-config` gate their steps on the capability flags (e.g. don't toggle Zigbee on a board
 whose `zigbee_supported` is false).
 
 **Gate to clear:** a `Capabilities` snapshot and a `WifiState` recorded; reachability re-confirmed
@@ -217,8 +217,8 @@ session over the shared library's single HMAC implementation.
 
 ## Hand-off to the next skill
 
-Downstream skills (`provision-network`, `flash-ota`, `config-hardware`, `build-grow-unit`,
-`diagnose`) each take the same two values:
+Downstream skills (`strawberry-provision`, `strawberry-flash`, `strawberry-config`, `strawberry-unit`,
+`strawberry-diagnose`) each take the same two values:
 
 - `--host "$HOST"`
 - `--token-file ./board.token`
@@ -229,7 +229,7 @@ next command.
 
 ## See also
 
-- Orchestrator: `setup-board` (sequences this skill first).
+- Orchestrator: `strawberry-board` (sequences this skill first).
 - Index + ground rules: `skills/README.md`.
 - Library: `@avatarsd-llc/strawberry-client` — the WS+protobuf core the CLI is built on. The HMAC handshake this skill drives is
   `ws.service.ts login()/tryResume()/logout()` ported framework-free.

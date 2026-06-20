@@ -1,5 +1,5 @@
 ---
-name: import-export
+name: strawberry-import-export
 description: >
   Lossless save/restore of a Gorshok-v4 unit design or a whole-device envelope: export to JSON
   (redact secrets by default; the device key is never serialized), import by replaying
@@ -8,7 +8,7 @@ description: >
   a unit or device design, clone a unit, or round-trip a configuration to JSON.
 ---
 
-# import-export
+# strawberry-import-export
 
 > STUB — to be filled in by a later agent. Front-matter and scope are fixed.
 

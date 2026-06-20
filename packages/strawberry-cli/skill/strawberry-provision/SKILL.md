@@ -1,5 +1,5 @@
 ---
-name: provision-network
+name: strawberry-provision
 description: >
   Join a Gorshok-v4 board to the operator network: set Wi-Fi STA credentials, optionally enable
   Home-Assistant MQTT auto-discovery, then (for fleet-managed boards) provision the WireGuard
@@ -8,7 +8,7 @@ description: >
   to WireGuard/the fleet/the overlay, or get a board onto the network.
 ---
 
-# provision-network — join the board to the LAN + overlay
+# strawberry-provision — join the board to the LAN + overlay
 
 Take an **authenticated** board off SoftAP and onto the operator LAN, optionally onto the
 Home-Assistant MQTT bus and the WireGuard overlay. Every operation here goes through
@@ -18,7 +18,7 @@ Home-Assistant MQTT bus and the WireGuard overlay. Every operation here goes thr
 
 ## Prerequisites
 
-1. **You have an authenticated, resumable session.** Run the `reach-and-auth` skill first. You
+1. **You have an authenticated, resumable session.** Run the `strawberry-reach` skill first. You
    need a `$HOST` (the `ws://<ip>/ws` confirmed **by MAC** — DHCP leases drift, so a known IP is
    not enough) and a 0600 `--token-file` so the session survives the reconnects that a Wi-Fi
    switch causes.
@@ -39,8 +39,8 @@ Home-Assistant MQTT bus and the WireGuard overlay. Every operation here goes thr
 Set a shell var for the session so every command is copy-pasteable:
 
 ```bash
-HOST=ws://192.0.2.177/ws        # the MAC-confirmed target from reach-and-auth
-TOK=./board.token               # the 0600 token file from reach-and-auth
+HOST=ws://192.0.2.177/ws        # the MAC-confirmed target from strawberry-reach
+TOK=./board.token               # the 0600 token file from strawberry-reach
 MAC=aa:bb:cc:dd:ee:ff           # used to re-find the board after the IP moves
 CIDR=192.0.2.0/24               # operator LAN to re-scan after Wi-Fi join
 ```
@@ -158,7 +158,7 @@ The board will silently fail to hand-shake if the `.conf` is missing a peer fiel
 (pure parse + netmask derivation, no network, mirrors the firmware logic):
 
 ```bash
-node skills/provision-network/scripts/check-wg-conf.mjs ./strawberry-sd.conf
+node skills/strawberry-provision/scripts/check-wg-conf.mjs ./strawberry-sd.conf
 ```
 
 It prints the derived `local_ip / local_netmask -> peer_endpoint:port keepalive` line and exits
@@ -226,7 +226,7 @@ strawberry query wireguard --host "$HOST" --json    # WgConfig: enabled, has_pri
 - **Wi-Fi rollback** has a catch: if the new SSID is wrong, the board may be unreachable on the
   LAN. Re-resolve by MAC first; if it never joined, fall back to its **SoftAP** (it re-raises the
   AP when STA fails to associate) and re-send `WifiSet` with corrected credentials. A
-  `factory-reset` (a destructive, sign-off-gated step — see the `flash-ota`/`setup-board` skills)
+  `factory-reset` (a destructive, sign-off-gated step — see the `strawberry-flash`/`strawberry-board` skills)
   is the last resort to clear bad NVS network config.
 
 ## Done when
@@ -239,9 +239,9 @@ strawberry query wireguard --host "$HOST" --json    # WgConfig: enabled, has_pri
 
 ## See also
 
-- `reach-and-auth` — the mandatory predecessor (discover + HMAC login + token persist).
-- `config-hardware` — subsystem flags + hardware calibration, runs after the board is on the LAN.
-- `setup-board` — the orchestrator that sequences this skill between `reach-and-auth` and
-  `flash-ota`.
+- `strawberry-reach` — the mandatory predecessor (discover + HMAC login + token persist).
+- `strawberry-config` — subsystem flags + hardware calibration, runs after the board is on the LAN.
+- `strawberry-board` — the orchestrator that sequences this skill between `strawberry-reach` and
+  `strawberry-flash`.
 - Library: `@avatarsd-llc/strawberry-client`. Superseded tool:
   `strawberry-fw/tools/wg_provision.py`.

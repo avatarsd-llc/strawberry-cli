@@ -1,17 +1,17 @@
 ---
-name: setup-board
+name: strawberry-board
 description: >
   Top-level orchestrator that takes an ARBITRARY Gorshok-v4 board from fresh to
   running+configured by sequencing the per-step skills in order: discover ->
-  reach-and-auth -> capabilities -> provision-network -> wireguard -> flash-ota ->
-  config-hardware -> build-grow-unit -> diagnose. Locates the board by MAC because
+  strawberry-reach -> capabilities -> strawberry-provision -> wireguard -> strawberry-flash ->
+  strawberry-config -> strawberry-unit -> diagnose. Locates the board by MAC because
   DHCP drifts, drives each sub-skill via strawberry-cli, and stops for human sign-off
   before destructive steps (factory-reset, grow-erase, OTA). Use when asked to "set up
   a board", "bring up a Gorshok board", "provision and flash a board from scratch", or
   to run the full board bring-up.
 ---
 
-# setup-board — fresh board to running, orchestrated
+# strawberry-board — fresh board to running, orchestrated
 
 This is the **orchestrator**. It does not implement board operations itself; it sequences the
 per-step skills, each of which drives `strawberry-cli`. The CLI is a thin front end over the
@@ -53,14 +53,14 @@ to get wrong. They wrap `strawberry`; they add no protocol logic of their own.
   step 0, and **re-run it after any step that can move the DHCP lease** (Wi-Fi join in step 3, the
   reboot in step 5, the OTA reboot in step 6). A stale `$HOST` is the most common false "crash".
   ```bash
-  HOST="$(skills/setup-board/scripts/resolve-host.sh --cidr 192.0.2.0/24 --mac aa:bb:cc:dd:ee:ff)"
-  # or trust a known IP: HOST="$(skills/setup-board/scripts/resolve-host.sh --host 192.0.2.121)"
+  HOST="$(skills/strawberry-board/scripts/resolve-host.sh --cidr 192.0.2.0/24 --mac aa:bb:cc:dd:ee:ff)"
+  # or trust a known IP: HOST="$(skills/strawberry-board/scripts/resolve-host.sh --host 192.0.2.121)"
   ```
 - `scripts/dwell-3x.sh` — the reboot-recovery gate. Dwells, then requires the board to answer
   `query stats` with a healthy `min_free` **three times in a row** before any destructive step
   claims success. Call it after the reboot in step 5 and after the OTA in step 6.
   ```bash
-  skills/setup-board/scripts/dwell-3x.sh --host "$HOST" --token-file "$TOKEN" --dwell 12
+  skills/strawberry-board/scripts/dwell-3x.sh --host "$HOST" --token-file "$TOKEN" --dwell 12
   ```
 
 ## Worked example (full bring-up)
@@ -76,7 +76,7 @@ WG=~/fleet/gorshok-ab48.conf           # wg-quick conf (fleet boards only)
 IMG=~/builds/strawberry-fw-combined.img
 
 strawberry help --json >/dev/null                                   # vocabulary is provable
-HOST="$(skills/setup-board/scripts/resolve-host.sh --cidr "$CIDR" --mac "$MAC")"   # step 0
+HOST="$(skills/strawberry-board/scripts/resolve-host.sh --cidr "$CIDR" --mac "$MAC")"   # step 0
 strawberry auth login --host "$HOST" --password-file "$PWFILE" --token-file "$TOKEN" --json  # step 1
 strawberry query capabilities --host "$HOST" --json                 # step 2 (gate later steps)
 # ... steps 3-8 below, re-resolving $HOST after every lease-moving step ...
@@ -90,11 +90,11 @@ shapes, poll loops) to that sub-skill.
 Run these in order. Each bullet names the per-step skill to apply and the gate to clear before
 moving on. The matching skills live in sibling directories under `skills/`.
 
-### 0. Discover — find the board (skill: `reach-and-auth`)
+### 0. Discover — find the board (skill: `strawberry-reach`)
 
 ```bash
 strawberry discover --cidr <lan-cidr> --mac <board-mac> --json
-HOST="$(skills/setup-board/scripts/resolve-host.sh --cidr <lan-cidr> --mac <board-mac>)"
+HOST="$(skills/strawberry-board/scripts/resolve-host.sh --cidr <lan-cidr> --mac <board-mac>)"
 ```
 
 WS-probes candidate IPs (no mDNS), opens each, reads `WHAT_CAPABILITIES` + `WifiState`, and
@@ -105,7 +105,7 @@ firmware) and resolve with `--host <softap-ip>`.
 
 **Gate:** exactly one candidate confirmed by MAC; `$HOST` set.
 
-### 1. Authenticate (skill: `reach-and-auth`)
+### 1. Authenticate (skill: `strawberry-reach`)
 
 ```bash
 strawberry auth login --host $HOST --password-file <f> --token-file <t> --json
@@ -118,7 +118,7 @@ HMAC challenge-response (`AuthChallengeReq` -> `AuthChallenge{nonce}` ->
 
 **Gate:** `AuthOk` received; token file written with mode 0600.
 
-### 2. Capabilities — gate every later step to the real hardware (skill: `reach-and-auth`)
+### 2. Capabilities — gate every later step to the real hardware (skill: `strawberry-reach`)
 
 ```bash
 strawberry query capabilities --host $HOST --json
@@ -131,7 +131,7 @@ enables. Carry this forward: skip any later sub-step whose hardware the board la
 
 **Gate:** capabilities snapshot recorded; later steps scoped to it.
 
-### 3. Network — join the LAN (skill: `provision-network`)
+### 3. Network — join the LAN (skill: `strawberry-provision`)
 
 ```bash
 strawberry net wifi --host $HOST --ssid <S> --wifi-pass <P>
@@ -144,7 +144,7 @@ update `$HOST`. Resume the session with the stored token.
 
 **Gate:** `WifiState` shows connected with a routable LAN IP.
 
-### 4. Overlay — fleet join (skill: `provision-network`, fleet only)
+### 4. Overlay — fleet join (skill: `strawberry-provision`, fleet only)
 
 ```bash
 strawberry wg apply --host $HOST --conf <wg-quick.conf>
@@ -156,7 +156,7 @@ standalone boards.
 
 **Gate:** `WgStatus.state == up` (fleet boards only).
 
-### 5. Config — calibration + boot subsystems (skill: `config-hardware`)
+### 5. Config — calibration + boot subsystems (skill: `strawberry-config`)
 
 ```bash
 strawberry system flags  --host $HOST [--onewire on] [--modbus ...] [--zigbee ...] [--can ...]
@@ -169,20 +169,20 @@ Flags persist to NVS and take effect **on next reboot** — reboot if you change
 
 ```bash
 strawberry reboot --host $HOST                                   # only if a flag actually changed
-skills/setup-board/scripts/dwell-3x.sh --host $HOST --token-file <t>   # validate recovery
-HOST="$(skills/setup-board/scripts/resolve-host.sh --cidr <lan-cidr> --mac <board-mac>)"  # lease may have moved
+skills/strawberry-board/scripts/dwell-3x.sh --host $HOST --token-file <t>   # validate recovery
+HOST="$(skills/strawberry-board/scripts/resolve-host.sh --cidr <lan-cidr> --mac <board-mac>)"  # lease may have moved
 ```
 
 **Gate:** config written; if flags changed, reboot validated dwell+3x and `$HOST` re-resolved.
 
-### 6. Firmware — bring to target revision (skill: `flash-ota`) [SIGN-OFF]
+### 6. Firmware — bring to target revision (skill: `strawberry-flash`) [SIGN-OFF]
 
 > Destructive: this reboots the unit. **Get human sign-off first.**
 
 ```bash
 strawberry ota upload --host $HOST --combined <img>                   # fw + web-UI in lockstep
-skills/setup-board/scripts/dwell-3x.sh --host $HOST --token-file <t>   # dwell, then confirm 3x
-HOST="$(skills/setup-board/scripts/resolve-host.sh --cidr <lan-cidr> --mac <board-mac>)"  # lease may have moved
+skills/strawberry-board/scripts/dwell-3x.sh --host $HOST --token-file <t>   # dwell, then confirm 3x
+HOST="$(skills/strawberry-board/scripts/resolve-host.sh --cidr <lan-cidr> --mac <board-mac>)"  # lease may have moved
 strawberry auth resume --host $HOST --token-file <t>                  # re-auth after the reboot
 strawberry query ota  --host $HOST --json                             # confirm target revision
 ```
@@ -193,7 +193,7 @@ read** — `dwell-3x.sh` enforces the dwell + three consecutive healthy probes.
 **Gate:** target revision reported by `query ota`; `dwell-3x.sh` exited 0 (pushes resumed,
 min_free healthy).
 
-### 7. Build unit — compose + wire (skill: `build-grow-unit`)
+### 7. Build unit — compose + wire (skill: `strawberry-unit`)
 
 ```bash
 strawberry grow unit-set            --host $HOST --id grow.1 --name '<Name>' [--kind K] --active
@@ -204,11 +204,11 @@ strawberry box set                  --host $HOST --unit grow.1 --data <box.json>
 ```
 
 Or one-shot a proven design: `strawberry unit import --host $HOST --file <design.json>` (skill:
-`import-export`). `graph-apply` is idempotent via re-bind.
+`strawberry-import-export`). `graph-apply` is idempotent via re-bind.
 
 **Gate:** `query grow_config` shows the unit; `controllers list` shows no orphans.
 
-### 8. Verify — health + dynamics (skill: `diagnose`)
+### 8. Verify — health + dynamics (skill: `strawberry-diagnose`)
 
 ```bash
 strawberry query grow_config --host $HOST --json        # unit present, no orphan endpoints
@@ -258,6 +258,6 @@ The orchestrator is resumable; do not restart from zero on a transient failure.
 
 - Helper scripts (this dir): `scripts/resolve-host.sh` (resolve `$HOST` by MAC),
   `scripts/dwell-3x.sh` (reboot-recovery gate). Both wrap `strawberry`; zero extra deps.
-- Per-step skills: `reach-and-auth`, `provision-network`, `flash-ota`, `config-hardware`,
-  `build-grow-unit`, `import-export`, `diagnose` (sibling dirs under `skills/`).
+- Per-step skills: `strawberry-reach`, `strawberry-provision`, `strawberry-flash`, `strawberry-config`,
+  `strawberry-unit`, `strawberry-import-export`, `strawberry-diagnose` (sibling dirs under `skills/`).
 - Library: `@avatarsd-llc/strawberry-client` — the shared WS+protobuf core the CLI is built on.

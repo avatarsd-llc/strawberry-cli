@@ -1,5 +1,5 @@
 ---
-name: build-grow-unit
+name: strawberry-unit
 description: >
   Compose a Gorshok-v4 cultivation unit end to end via strawberry-cli: create the unit
   container, add its user-defined IO endpoints (full id <unit_id>.<name>), atomically
@@ -10,7 +10,7 @@ description: >
   a Control Box on a Gorshok / strawberry-fw board.
 ---
 
-# build-grow-unit
+# strawberry-unit
 
 Build a complete, wired cultivation unit on a live board, in the canonical order:
 
@@ -24,7 +24,7 @@ wire protocol — it issues CLI verbs and reads them back.
 
 ## Prerequisites (do these first; do not skip)
 
-- **An authenticated session to the target board.** Run the `strawberry-reach-and-auth` skill
+- **An authenticated session to the target board.** Run the `strawberry-reach` skill
   first: discover the board, confirm it **by MAC** (DHCP leases drift — a stale IP looks like a
   crash but isn't; e.g. `aa:bb:cc:dd:ee:ff`), HMAC login, and persist the token to a
   **0600** token file. Every command below takes `--host <ip>` and an authenticated session
@@ -299,8 +299,8 @@ order. `--as` clones the design under a new unit id.
 
 ## See also
 
-- Orchestrator: `strawberry-setup-board` (this is its step 7).
-- First step: `strawberry-reach-and-auth` (you need an authed session before any command here).
+- Orchestrator: `strawberry-board` (this is its step 7).
+- First step: `strawberry-reach` (you need an authed session before any command here).
 - One-shot path: `strawberry-import-export`.
 - Health pass after building: `strawberry-diagnose`.
 - Firmware contract: the canonical `proto/messages.proto` shipped in `@avatarsd-llc/strawberry-client` — covers unit identity, the real-day scheduler, and the Control Box blob.

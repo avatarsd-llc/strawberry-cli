@@ -1,5 +1,5 @@
 ---
-name: config-hardware
+name: strawberry-config
 description: >
   Set persisted hardware/runtime config and boot-time subsystem enables on a Gorshok-v4 board:
   ws2812 count, hx711 scale/offset, flow ppl, timezone/ntp, stats period, display layout/rotation,
@@ -9,7 +9,7 @@ description: >
   IO boards.
 ---
 
-# config-hardware
+# strawberry-config
 
 Persist a board's hardware calibration and boot-time subsystem enables, gated to what the hardware
 actually has. Drives `strawberry-cli` (from `@avatarsd-llc/strawberry-cli`) over the device
@@ -25,7 +25,7 @@ board is reachable and authenticated, and (usually) on the LAN.
 
 ## Prerequisites
 
-- **A reachable, authenticated session.** Run `reach-and-auth` first. You need the board's current
+- **A reachable, authenticated session.** Run `strawberry-reach` first. You need the board's current
   `--host <ip>` and a token file. Because DHCP leases drift, **locate the board by MAC**
   (`aa:bb:cc:dd:ee:ff` is the known dev board) — a stale IP looks like a crash but is just a moved
   lease:
@@ -103,7 +103,7 @@ Field meanings + safe ranges (from `ConfigSet`):
   boot** (no live re-layout). LVGL boards only.
 - `--display-rotation 0|1|2|3` — `0`/90/180/270°. **Applies on next boot.** LVGL boards only.
 - `--password NEW` — rotate the device login secret. After this, **re-authenticate** with the new
-  secret (run `reach-and-auth` again) — your current token survives until its TTL but a fresh login
+  secret (run `strawberry-reach` again) — your current token survives until its TTL but a fresh login
   needs the new password.
 
 This verb also folds `SdInfoReq` (`--sd-info` -> `SdInfo`) and `MpcAuxSet`; consult

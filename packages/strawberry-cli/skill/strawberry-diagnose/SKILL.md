@@ -1,10 +1,10 @@
 ---
-name: diagnose
+name: strawberry-diagnose
 description: >
   On-device health and observability pass for a Gorshok-v4 board: free-heap trend + min_free
   watermark, the 7-phase system stress, capacity-boundary probing, and JSONL recording of push
   streams (logs, stats, io, controllers) for offline dynamics. The standing per-iteration HIL
-  check. Use when asked to diagnose/check board health, watch heap/min_free, run a stress or
+  check. Use when asked to strawberry-diagnose/check board health, watch heap/min_free, run a stress or
   capacity test, or record live device telemetry to a file.
 ---
 

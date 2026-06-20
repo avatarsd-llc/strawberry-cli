@@ -53,7 +53,7 @@ them by subscribing to their topics, not by querying. Full command reference:
 ## Skill â€” drive a board from a Claude Code agent
 
 The package bundles agent skills under [`skill/`](./skill/). Point a Claude Code agent at
-[`skill/setup-board`](./skill/setup-board/SKILL.md) and it will take an arbitrary board
+[`skill/strawberry-board`](./skill/strawberry-board/SKILL.md) and it will take an arbitrary board
 from fresh to running by sequencing the per-step skills, each of which drives the
 `strawberry` CLI (it adds no second client). The agent first reads
 `strawberry help --json` so every step uses the device's *provable* command vocabulary
@@ -72,13 +72,13 @@ The orchestrator chains these per-step skills (each is also usable on its own â€
 
 | Skill | Stage |
 |-------|-------|
-| [`reach-and-auth`](./skill/reach-and-auth/SKILL.md) | Find the board on the LAN (WS probe, no mDNS), confirm by MAC, HMAC login, persist a 0600 token. |
-| [`provision-network`](./skill/provision-network/SKILL.md) | Join Wi-Fi STA, optional HA MQTT, optional WireGuard fleet join. |
-| [`flash-ota`](./skill/flash-ota/SKILL.md) | Bring to target firmware/web-UI revision (app/spa/combined), validated dwell+3x. |
-| [`config-hardware`](./skill/config-hardware/SKILL.md) | Persisted config + boot subsystem flags + 1-Wire IO boards. |
-| [`build-grow-unit`](./skill/build-grow-unit/SKILL.md) | Compose a cultivation unit: create, add IO, atomic graph-apply, schedule, optional Control Box. |
-| [`import-export`](./skill/import-export/SKILL.md) | Lossless save/restore of a unit or whole-device design; secrets redacted, device key never serialized. |
-| [`diagnose`](./skill/diagnose/SKILL.md) | Health pass: heap trend, system stress, capacity boundary, JSONL recording. |
+| [`strawberry-reach`](./skill/strawberry-reach/SKILL.md) | Find the board on the LAN (WS probe, no mDNS), confirm by MAC, HMAC login, persist a 0600 token. |
+| [`strawberry-provision`](./skill/strawberry-provision/SKILL.md) | Join Wi-Fi STA, optional HA MQTT, optional WireGuard fleet join. |
+| [`strawberry-flash`](./skill/strawberry-flash/SKILL.md) | Bring to target firmware/web-UI revision (app/spa/combined), validated dwell+3x. |
+| [`strawberry-config`](./skill/strawberry-config/SKILL.md) | Persisted config + boot subsystem flags + 1-Wire IO boards. |
+| [`strawberry-unit`](./skill/strawberry-unit/SKILL.md) | Compose a cultivation unit: create, add IO, atomic graph-apply, schedule, optional Control Box. |
+| [`strawberry-import-export`](./skill/strawberry-import-export/SKILL.md) | Lossless save/restore of a unit or whole-device design; secrets redacted, device key never serialized. |
+| [`strawberry-diagnose`](./skill/strawberry-diagnose/SKILL.md) | Health pass: heap trend, system stress, capacity boundary, JSONL recording. |
 
 Canonical order: `discover -> auth -> capabilities -> network -> overlay (fleet) ->
 config -> firmware -> build unit -> verify`. The skills locate the board **by MAC**
