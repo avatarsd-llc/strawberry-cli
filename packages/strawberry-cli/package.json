@@ -1,7 +1,7 @@
 {
   "name": "@avatarsd-llc/strawberry-cli",
-  "version": "0.2.0",
-  "description": "Framework-free CLI for the Strawberry (Gorshok-v4) grow controller. Drives the WS+protobuf interface (SEC-001 auth, OTA, WireGuard, grow-unit build) over @avatarsd-llc/strawberry-client.",
+  "version": "0.2.1",
+  "description": "Framework-free CLI for the Strawberry (Gorshok-v4) grow controller. Drives the WS+protobuf interface (HMAC auth, OTA, WireGuard, grow-unit build) over @avatarsd-llc/strawberry-client.",
   "license": "Apache-2.0",
   "author": "Avatars LLC",
   "homepage": "https://github.com/avatarsd-llc/strawberry-cli#readme",
