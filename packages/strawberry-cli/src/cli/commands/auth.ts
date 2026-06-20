@@ -1,5 +1,5 @@
 /**
- * `strawberry auth login|resume|revoke` — SEC-001 session lifecycle.
+ * `strawberry auth login|resume|revoke` — HMAC session lifecycle.
  *
  *   login  : HMAC challenge-response, persist the token to the FileTokenStore.
  *   resume : replay a stored token across a reconnect / firmware reboot.

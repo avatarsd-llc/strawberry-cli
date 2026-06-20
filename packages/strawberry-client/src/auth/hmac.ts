@@ -1,12 +1,12 @@
 /**
- * SEC-001 client-side auth primitive.
+ * HMAC client-side auth primitive.
  *
  * The plaintext password never crosses the WS wire: the browser derives
  * HMAC-SHA256(password, nonce) locally and sends only the 32-byte digest, which
  * the firmware recomputes from its NVS password + the single-use nonce it
  * handed out (mbedtls, ws_hmac.c) and constant-time compares.
  *
- * SECURE-CONTEXT TRAP (the SEC-001 regression): the device serves this SPA over
+ * SECURE-CONTEXT TRAP (the HMAC regression): the device serves this SPA over
  * plain http://<LAN-IP> (TLS is too heavy for the 4 MB board), and `crypto.subtle`
  * (Web Crypto) is ONLY defined in a *secure context* (https or localhost). In a
  * real browser over http, `crypto.subtle` is `undefined`, so the previous

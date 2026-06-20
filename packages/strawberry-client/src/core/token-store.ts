@@ -1,7 +1,7 @@
 /**
  * TokenStore seam (ADR-0066) — replaces ws.service.ts's bare localStorage calls
  * (the STORAGE_TOKEN_KEY logic at :39,:149,:486,:506,:555). DeviceClient persists
- * the SEC-001 session token through this interface so the same client works in a
+ * the HMAC session token through this interface so the same client works in a
  * browser (LocalStorageTokenStore), in tests/Pulumi (MemoryTokenStore), and on a
  * 0600 file (FileTokenStore, ./node).
  */

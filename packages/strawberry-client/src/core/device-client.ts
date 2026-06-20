@@ -5,7 +5,7 @@
  *   - request/reply by rid Map (concurrent mode, the SPA default) OR one-in-flight
  *     (sequential mode, for the Pulumi provider / CLI), D4
  *   - the 0x00 ClientMessage / 0x01 raw-OTA-chunk framing (wire/framing.ts)
- *   - SEC-001 HMAC challenge-response login; the plaintext password NEVER hits the
+ *   - HMAC challenge-response login; the plaintext password NEVER hits the
  *     wire — only HMAC-SHA256(password, nonce) (auth/hmac.ts, pure-JS over http)
  *   - AuthResume on reconnect; ERR_AUTH_EXPIRED clears the token
  *   - bootOffsetMs = Date.now() - serverNowMs captured at AuthOk
@@ -336,10 +336,10 @@ export class DeviceClient {
     });
   }
 
-  /* ------------ auth (SEC-001) ------------ */
+  /* ------------ auth (HMAC) ------------ */
 
   /**
-   * Full SEC-001 challenge-response login. The plaintext password NEVER crosses
+   * Full HMAC challenge-response login. The plaintext password NEVER crosses
    * the wire: request a single-use nonce, derive HMAC-SHA256(password, nonce)
    * locally (pure-JS — crypto.subtle is undefined over http), send only the
    * digest. The firmware recomputes from its NVS password + nonce and

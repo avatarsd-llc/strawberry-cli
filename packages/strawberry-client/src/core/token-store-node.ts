@@ -4,7 +4,7 @@
  * that OTA / system-flags changes cause.
  *
  * The token file is created/written with mode 0600 (owner read/write only): the
- * SEC-001 session token is a bearer credential.
+ * HMAC session token is a bearer credential.
  */
 import { readFileSync, writeFileSync, rmSync, chmodSync, existsSync } from 'node:fs';
 import type { TokenStore } from './token-store.js';

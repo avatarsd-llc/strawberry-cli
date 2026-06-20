@@ -2,7 +2,7 @@
  * strawberry-cli — a framework-free CLI over @avatarsd-llc/strawberry-cli.
  *
  * The third consumer of the shared lib (ADR-0066 R3): every command opens a
- * DeviceClient session (Node ws transport + 0600 FileTokenStore), runs SEC-001
+ * DeviceClient session (Node ws transport + 0600 FileTokenStore), runs HMAC
  * auth, and drives the proven ws.service.ts logic headless. Supersedes the
  * hand-rolled Python in tools/ (ota_upload.py, wg_provision.py, verify_grow.py,
  * the ws_*_stress.py family, ...).
@@ -40,7 +40,7 @@ const COMMANDS: CommandSpec[] = [
   { name: 'info', summary: 'Connect + print capabilities / flags / wifi', usage: 'info --host H', run: cmdInfo },
   { name: 'connect', summary: 'Alias of info (auth + identity check)', usage: 'connect --host H', run: cmdInfo },
   { name: 'query', summary: `Pull a device state (${QUERY_VERB_LIST.length} verbs)`, usage: `query <${QUERY_VERB_LIST.join('|')}> --host H`, run: cmdQuery },
-  { name: 'auth', summary: 'SEC-001 session: login / resume / revoke', usage: 'auth <login|resume|revoke> --host H', run: cmdAuth },
+  { name: 'auth', summary: 'HMAC session: login / resume / revoke', usage: 'auth <login|resume|revoke> --host H', run: cmdAuth },
   { name: 'net', summary: 'Provision Wi-Fi / Home-Assistant; read net info', usage: 'net <wifi|ha|info> --host H', run: cmdNet },
   { name: 'provision', summary: 'Convenience: wifi / wireguard / identity(stub)', usage: 'provision <wifi|wireguard|identity> --host H', run: cmdProvision },
   { name: 'wg', summary: 'WireGuard: apply .conf / disable / status', usage: 'wg <apply|disable|status> --host H', run: cmdWg },
@@ -81,7 +81,7 @@ async function cmdHelp(p: ParsedArgs): Promise<void> {
     });
     return;
   }
-  printLine('strawberry — Gorshok-v4 grow controller CLI (WS+protobuf, SEC-001 auth)');
+  printLine('strawberry — Gorshok-v4 grow controller CLI (WS+protobuf, HMAC auth)');
   printLine('');
   printLine('Usage: strawberry <command> [args] --host <ip> [--password P] [--json]');
   printLine('');

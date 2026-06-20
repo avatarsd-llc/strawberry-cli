@@ -5,7 +5,7 @@
  * Builds a Node WsTransport + DeviceClient (sequential request mode — a CLI does
  * one thing at a time and never wants overlapping rids), wires a FileTokenStore
  * so a session survives across runs and the reboots OTA/flags cause, and runs the
- * SEC-001 login. The plaintext password is resolved from (in order) an explicit
+ * HMAC login. The plaintext password is resolved from (in order) an explicit
  * flag, a password file, or the STRAWBERRY_PW / STRAWBERRY_PASSWORD env var, and
  * NEVER crosses the wire — DeviceClient.login sends only HMAC-SHA256(pw, nonce).
  */
@@ -114,7 +114,7 @@ export interface Session {
 
 /**
  * Open a connected, authenticated session: connect (auto-resumes a stored token),
- * and if that did not leave us authed, run a full SEC-001 login with the resolved
+ * and if that did not leave us authed, run a full HMAC login with the resolved
  * password. Caller must `dispose()` (or `client.disconnect()`) when done.
  */
 export async function openSession(p: ParsedArgs): Promise<Session> {
